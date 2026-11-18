@@ -53,6 +53,9 @@ export default async function productRoutes(fastify) {
     }
 
     const product = getProductById(id);
+    if (product.rawBuffer) {
+      return reply.type('application/json').send(product.rawBuffer);
+    }
     if (product.rawJson) {
       return reply.type('application/json').send(product.rawJson);
     }
