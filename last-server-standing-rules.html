@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Last Server Standing — Rules &amp; API Spec</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:ital,wght@0,300;0,600;0,700;0,900;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: Sheryians design system — sticky ink sidebar + paper reading column. Single light theme by design. */
+:root {
+  --ink:       #0E0F14;
+  --paper:     #F5F2EB;
+  --paper2:    #EDE9DF;
+  --paper3:    #E4DFD3;
+  --rule:      #D4CEBC;
+  --muted:     #6B6455;
+  --accent:    #C84B1F;
+  --accent2:   #1A6B4A;
+  --accent3:   #1B4587;
+  --gold:      #B8860B;
+  --code-bg:   #1A1C24;
+  --code-head: #13141A;
+  --code-text: #E2DCCC;
+  --flag-c:    #5BA4CF;
+  --val-c:     #F4A261;
+  --body-text: #2A2720;
+  --white:     #FFFFFF;
+  --on-ink-1:  rgba(255, 255, 255, 0.7);
+  --on-ink-2:  rgba(255, 255, 255, 0.5);
+  --on-ink-3:  rgba(255, 255, 255, 0.35);
+  --on-ink-4:  rgba(255, 255, 255, 0.25);
+  --on-ink-line: rgba(255, 255, 255, 0.12);
+  --on-ink-wash: rgba(255, 255, 255, 0.06);
+  --accent-wash: rgba(200, 75, 31, 0.08);
+  --scrim:     rgba(14, 15, 20, 0.55);
+  --note-bg:   #FEF9EC;
+  --note-line: #EDD97A;
+  --note-text: #5C4A00;
+  --note-strong: #3D3000;
+  --warn-bg:   #FEF2F2;
+  --warn-line: #FCA5A5;
+  --warn-text: #7F1D1D;
+  --tok-cmd:   #87CEEB;
+  --tok-str:   #98C379;
+  --tok-key:   #C678DD;
+  --tok-op:    #E5C07B;
+  --tok-com:   rgba(255, 255, 255, 0.38);
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-up { animation: fadeUp 0.4s ease both; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Layout ── */
+.layout-container { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background-color: var(--ink);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 32px 0 40px;
+}
+.main-content {
+  flex: 1;
+  min-width: 0;
+  max-width: calc(100% - 260px);
+  padding-block: 56px 80px;
+  padding-left: max(56px, env(safe-area-inset-left, 0px));
+  padding-right: max(56px, env(safe-area-inset-right, 0px));
+}
+.content { max-width: 920px; }
+
+/* ── Sidebar ── */
+.nav-brand { padding: 0 24px; margin-bottom: 24px; }
+.nav-brand .logo { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--white); line-height: 1.25; }
+.nav-brand .logo .accent-dot { color: var(--accent); }
+.nav-brand .sub { font-family: var(--font-mono); font-size: 10px; color: var(--on-ink-3); letter-spacing: 0.06em; margin-top: 4px; }
+.nav-group-label {
+  font-family: var(--font-mono); font-size: 9px; color: var(--on-ink-4);
+  letter-spacing: 0.12em; text-transform: uppercase; padding: 0 24px; margin-top: 16px; margin-bottom: 4px;
+}
+.nav-link {
+  display: flex; align-items: center; gap: 8px; padding: 10px 24px;
+  font-family: var(--font-body); font-size: 12.5px; color: var(--on-ink-2);
+  border-left: 2px solid transparent; text-decoration: none;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+.nav-link:hover { color: var(--white); background-color: rgba(255, 255, 255, 0.04); }
+.nav-link.active { color: var(--white); border-left-color: var(--accent); background-color: var(--accent-wash); }
+.nav-num {
+  width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background-color: rgba(255, 255, 255, 0.08); font-family: var(--font-mono); font-size: 9px; border-radius: 4px; color: inherit;
+}
+.nav-link:hover .nav-num, .nav-link.active .nav-num { background-color: var(--accent); color: var(--white); }
+
+.mobile-bar { display: none; }
+.menu-btn {
+  display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--white);
+  border: 1px solid var(--on-ink-line); border-radius: 6px; padding: 6px 12px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+}
+.menu-btn svg { width: 14px; height: 14px; }
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 35; }
+
+/* ── Hero ── */
+.hero { margin-bottom: 64px; padding-bottom: 40px; border-bottom: 1px solid var(--rule); }
+.hero-eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; }
+.hero h1 {
+  font-family: var(--font-display); font-size: clamp(36px, 5vw, 58px); font-weight: 900; color: var(--ink);
+  line-height: 1.05; letter-spacing: -0.02em; margin: 14px 0 18px; text-wrap: balance;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero-desc { font-family: var(--font-body); font-size: 16px; color: var(--muted); max-width: 640px; line-height: 1.65; margin: 0; }
+.hero-desc strong { color: var(--ink); }
+.hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.hero-tag {
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted); border: 1px solid var(--rule);
+  border-radius: 9999px; padding: 2px 12px; font-variant-numeric: tabular-nums;
+}
+.hero-tag.hot { color: var(--accent); border-color: var(--accent); }
+
+/* ── Sections ── */
+.section-block { margin-bottom: 72px; scroll-margin-top: 24px; }
+.section-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 28px; }
+.section-header-text { padding-top: 4px; min-width: 0; }
+.section-num-big { font-family: var(--font-display); font-size: 48px; font-weight: 900; color: var(--rule); user-select: none; line-height: 1; }
+.section-title { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1.2; text-wrap: balance; }
+.section-subtitle { font-family: var(--font-body); font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+h3 { font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--ink); margin: 28px 0 12px; text-wrap: balance; }
+h4 { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 20px 0 8px; }
+p { font-family: var(--font-body); font-size: 14.5px; color: var(--body-text); line-height: 1.7; margin: 0 0 12px; max-width: 72ch; }
+strong { font-weight: 600; }
+code {
+  font-family: var(--font-mono); font-size: 12px; color: var(--accent); background-color: var(--paper3);
+  border: 1px solid var(--rule); border-radius: 4px; padding: 1px 4px; overflow-wrap: anywhere;
+}
+.plain-list { margin: 8px 0 14px; padding-left: 20px; font-size: 14.5px; color: var(--body-text); max-width: 72ch; }
+.plain-list li { margin: 6px 0; }
+
+/* ── Boxes ── */
+.concept-box { background-color: var(--paper2); border-left: 3px solid var(--accent3); border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 16px 0; }
+.concept-box-label { font-family: var(--font-mono); font-size: 9px; color: var(--accent3); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
+.concept-box-text { font-family: var(--font-body); font-size: 14px; color: var(--ink); line-height: 1.65; margin: 0; max-width: none; }
+.concept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 16px 0; }
+.concept-grid .concept-box { margin: 0; }
+.concept-box.ok { border-left-color: var(--accent2); }
+.concept-box.ok .concept-box-label { color: var(--accent2); }
+.concept-box.no { border-left-color: var(--accent); }
+.concept-box.no .concept-box-label { color: var(--accent); }
+.box-list { margin: 4px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--body-text); line-height: 1.6; }
+.box-list li { margin: 6px 0; }
+
+.note-box, .warning-box { border-radius: 8px; padding: 12px 16px; margin: 16px 0; display: flex; gap: 12px; align-items: flex-start; }
+.note-box { background-color: var(--note-bg); border: 1px solid var(--note-line); }
+.warning-box { background-color: var(--warn-bg); border: 1px solid var(--warn-line); }
+.note-box-icon, .warning-box-icon { font-size: 18px; line-height: 1; margin-top: 2px; }
+.note-box-text { font-family: var(--font-body); font-size: 13px; color: var(--note-text); margin: 0; max-width: none; min-width: 0; }
+.note-box-text strong { color: var(--note-strong); }
+.warning-box-text { font-family: var(--font-body); font-size: 13px; color: var(--warn-text); margin: 0; max-width: none; min-width: 0; }
+.note-list { margin: 6px 0 0; padding-left: 18px; }
+.note-list li { margin: 3px 0; }
+
+/* ── Port callout ── */
+.port-callout {
+  display: flex; align-items: center; gap: 24px; background: var(--ink); border-radius: 12px; padding: 22px 26px; margin: 16px 0 24px;
+}
+.port-num { font-family: var(--font-display); font-size: 64px; font-weight: 900; color: var(--accent); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.port-text { font-size: 14px; color: var(--on-ink-1); line-height: 1.65; margin: 0; max-width: none; }
+.port-text strong { color: var(--white); }
+.port-text code { color: var(--val-c); background: var(--on-ink-wash); border-color: var(--on-ink-line); }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: 600; color: var(--white);
+  text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 10px; border-radius: 4px; white-space: nowrap;
+}
+.badge-accent { background-color: var(--accent); }
+.badge-green  { background-color: var(--accent2); }
+.badge-blue   { background-color: var(--accent3); }
+.badge-gold   { background-color: var(--gold); }
+.badge-ink    { background-color: var(--ink); }
+.method {
+  display: inline-block; min-width: 54px; text-align: center; font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  color: var(--white); letter-spacing: 0.04em; padding: 2px 6px; border-radius: 4px;
+}
+.m-get { background: var(--accent2); }
+.m-post { background: var(--accent3); }
+
+/* ── Code ── */
+.code-block { border-radius: 8px; overflow: hidden; border: 1px solid var(--on-ink-wash); margin: 16px 0; background: var(--code-bg); }
+.code-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px;
+  background-color: var(--code-head); border-bottom: 1px solid var(--on-ink-wash);
+}
+.code-label { font-family: var(--font-mono); font-size: 10px; color: rgba(255, 255, 255, 0.4); text-transform: uppercase; letter-spacing: 0.08em; min-width: 0; overflow-wrap: anywhere; }
+.code-label.bad { color: #E8744A; }
+.code-copy-btn {
+  background: none; border: none; font-family: var(--font-mono); font-size: 10px; color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; transition: color 150ms ease; padding: 2px 4px;
+}
+.code-copy-btn:hover { color: var(--on-ink-1); }
+.code-pre {
+  background-color: var(--code-bg); color: var(--code-text); font-family: var(--font-mono); font-size: 12.5px;
+  line-height: 1.75; padding: 16px 20px; overflow-x: auto; margin: 0; tab-size: 2;
+}
+.token-command  { color: var(--tok-cmd); font-weight: bold; }
+.token-flag     { color: var(--flag-c); }
+.token-val      { color: var(--val-c); }
+.token-string   { color: var(--tok-str); }
+.token-comment  { color: var(--tok-com); font-style: italic; }
+.token-yaml-key { color: var(--tok-key); }
+.token-operator { color: var(--tok-op); }
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; margin: 16px 0; -webkit-overflow-scrolling: touch; }
+.table-wrap > table { margin: 0; }
+.wide { min-width: 640px; }
+.flag-table { width: 100%; border-collapse: collapse; font-family: var(--font-body); font-size: 14px; }
+.flag-table th {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+  background-color: var(--paper3); text-align: left; padding: 8px 12px; border: 1px solid var(--rule);
+}
+.flag-table td { padding: 8px 12px; border: 1px solid var(--rule); vertical-align: top; color: var(--body-text); }
+.flag-table tbody tr { transition: background-color 100ms ease; }
+.flag-table tbody tr:hover { background-color: var(--paper2); }
+.flag-table td.k { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.flag-table.compact td, .flag-table.compact th { padding: 6px 12px; }
+
+.compare-table { width: 100%; border-collapse: collapse; font-family: var(--font-body); font-size: 14px; border-radius: 8px; overflow: hidden; }
+.compare-table th {
+  background-color: var(--ink); color: var(--white); font-size: 13px; font-weight: 600; text-align: left;
+  padding: 12px 16px; border: 1px solid var(--ink);
+}
+.compare-table td { font-size: 13px; padding: 12px 16px; border: 1px solid var(--rule); vertical-align: top; color: var(--body-text); }
+.compare-table tbody tr { transition: background-color 100ms ease; }
+.compare-table tbody tr:hover { background-color: var(--paper2); }
+.compare-table .cell-title { font-weight: 600; color: var(--ink); }
+.compare-table .cell-muted { color: var(--muted); }
+.compare-table .cell-highlight { color: var(--accent2); font-weight: 500; }
+.num { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mono { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+.mono-path { font-family: var(--font-mono); font-size: 12px; color: var(--ink); white-space: nowrap; }
+.muted { color: var(--muted); }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 16px 0; }
+.two-col .table-wrap { margin: 0; }
+
+/* ── Endpoint cards ── */
+.endpoint { border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px 6px; margin: 22px 0; background: var(--paper); scroll-margin-top: 24px; }
+.endpoint-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.endpoint-path { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.endpoint-what { font-size: 13px; color: var(--muted); }
+.endpoint .code-block { margin: 12px 0; }
+.endpoint .table-wrap { margin: 12px 0; }
+.endpoint h4 { margin-top: 18px; }
+
+/* ── Sample responses ── */
+.resp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; margin: 12px 0; }
+.endpoint .resp-grid .code-block { margin: 0; }
+
+/* ── Rule examples ── */
+.rule-ex { display: grid; gap: 6px; margin-top: 10px; }
+.ex { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.55; background: var(--paper); border: 1px solid var(--rule); border-left-width: 3px; border-radius: 6px; padding: 7px 10px; }
+.ex.ok { border-left-color: var(--accent2); }
+.ex.bad { border-left-color: var(--accent); }
+.ex-mark { font-family: var(--font-mono); font-weight: 600; flex-shrink: 0; }
+.ex.ok .ex-mark { color: var(--accent2); }
+.ex.bad .ex-mark { color: var(--accent); }
+
+/* ── Numbered rule list ── */
+.rule-list { counter-reset: rule; list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 10px; }
+.rule-list li {
+  counter-increment: rule; position: relative; padding: 12px 16px 12px 52px; background: var(--paper2);
+  border: 1px solid var(--rule); border-radius: 8px; font-size: 14px; color: var(--body-text); line-height: 1.6;
+}
+.rule-list li::before {
+  content: counter(rule); position: absolute; left: 14px; top: 12px; width: 24px; height: 24px; border-radius: 6px;
+  background: var(--ink); color: var(--white); font-family: var(--font-mono); font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+}
+.rule-list li strong { color: var(--ink); }
+
+/* ── Legend + filter ── */
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+.legend-item { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--body-text); line-height: 1.55; background: var(--paper2); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; }
+.legend-item .badge { align-self: flex-start; }
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 20px 0 8px; padding: 12px 14px;
+  border: 1px solid var(--rule); border-radius: 8px; background: var(--paper2);
+}
+.filter-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-right: 4px; }
+.filter-chip {
+  font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--rule); background: var(--paper); color: var(--muted);
+  border-radius: 9999px; padding: 4px 12px; cursor: pointer; transition: all 150ms ease;
+}
+.filter-chip:hover { border-color: var(--ink); color: var(--ink); }
+.filter-chip[aria-pressed="true"] { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.filter-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* ── Verdict cards (poor examples) ── */
+.verdict-card { border: 1px solid var(--rule); border-left: 4px solid var(--rule); border-radius: 10px; background: var(--paper); padding: 18px 20px 10px; margin: 18px 0; }
+.verdict-card[data-verdict="dq"] { border-left-color: var(--accent); }
+.verdict-card[data-verdict="run"] { border-left-color: var(--gold); }
+.verdict-card[data-verdict="level"] { border-left-color: var(--accent3); }
+.verdict-card[data-verdict="slow"] { border-left-color: var(--accent2); }
+.verdict-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.verdict-head h3 { margin: 0; }
+.verdict-card .code-block { margin: 12px 0; }
+.why-line, .hint-line { font-size: 13.5px; color: var(--body-text); margin: 10px 0; max-width: none; }
+.why-line .lbl, .hint-line .lbl { font-family: var(--font-mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-right: 6px; }
+.why-line .lbl { color: var(--accent); }
+.hint-line .lbl { color: var(--accent2); }
+
+/* ── Flow diagram ── */
+.flow-diagram { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+.flow-step { display: flex; gap: 16px; }
+.flow-connector { display: flex; flex-direction: column; align-items: center; }
+.flow-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+.flow-dot-accent { background-color: var(--accent); }
+.flow-dot-green { background-color: var(--accent2); }
+.flow-dot-ink { background-color: var(--ink); }
+.flow-line { width: 2px; background-color: var(--rule); flex: 1; margin: 4px 0; }
+.flow-content { padding-bottom: 18px; min-width: 0; }
+.flow-title { font-family: var(--font-body); font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.flow-desc { font-family: var(--font-body); font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.6; max-width: 72ch; }
+.flow-tag { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent3); }
+
+/* ── Scale diagram ── */
+.scale-diagram {
+  background-color: var(--paper2); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 20px; margin: 16px 0;
+  font-family: var(--font-mono); font-size: 12px; line-height: 2; color: var(--muted); white-space: pre; overflow-x: auto;
+  font-variant-numeric: tabular-nums;
+}
+.scale-diagram .highlight { color: var(--ink); font-weight: bold; }
+.scale-diagram .green { color: var(--accent2); font-weight: 600; }
+.scale-diagram .red { color: var(--accent); font-weight: 600; }
+
+/* ── Pre-flight checklist ── */
+.preflight { list-style: none; padding: 0; margin: 16px 0; border-top: 1px dashed var(--rule); }
+.preflight li { border-bottom: 1px dashed var(--rule); }
+.preflight label { display: flex; gap: 12px; align-items: flex-start; padding: 10px 4px; font-size: 14px; color: var(--body-text); cursor: pointer; line-height: 1.55; }
+.preflight input { width: 16px; height: 16px; margin: 3px 0 0; flex-shrink: 0; accent-color: var(--accent2); cursor: pointer; }
+.preflight input:checked + span { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--rule); }
+.preflight-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ── FAQ ── */
+.faq details { border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); margin: 10px 0; }
+.faq details[open] { background: var(--paper2); }
+.faq summary {
+  cursor: pointer; padding: 12px 16px; font-weight: 600; color: var(--ink); font-size: 14.5px; list-style: none;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-family: var(--font-mono); color: var(--accent); font-size: 16px; line-height: 1.4; }
+.faq details[open] summary::after { content: "–"; }
+.faq-body { padding: 0 16px 6px; }
+.faq-body p { font-size: 14px; }
+
+/* ── Quiz ── */
+.quiz-box { background-color: var(--ink); border-radius: 12px; padding: 24px; margin: 32px 0; border: 1px solid rgba(255, 255, 255, 0.08); }
+.quiz-question { font-family: var(--font-body); font-size: 15px; color: var(--white); font-weight: 500; line-height: 1.6; margin-bottom: 20px; max-width: none; }
+.quiz-question code, .quiz-option code, .quiz-explain code { color: var(--val-c); background: var(--on-ink-wash); border-color: var(--on-ink-line); }
+.quiz-options { display: flex; flex-direction: column; gap: 12px; }
+.quiz-option {
+  text-align: left; font-family: var(--font-body); font-size: 13.5px; color: var(--on-ink-1); background: transparent;
+  border: 1px solid var(--on-ink-line); border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 200ms ease; line-height: 1.5;
+}
+.quiz-option:hover:not(:disabled) { border-color: var(--accent); color: var(--white); background-color: var(--accent-wash); }
+.quiz-option:disabled { cursor: not-allowed; }
+.quiz-option.correct { border-color: var(--accent2) !important; background-color: rgba(26, 107, 74, 0.15) !important; color: var(--white) !important; opacity: 1 !important; }
+.quiz-option.incorrect { border-color: var(--accent) !important; background-color: rgba(200, 75, 31, 0.15) !important; color: var(--white) !important; opacity: 1 !important; }
+.quiz-feedback { margin-top: 16px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.quiz-feedback.correct { color: #3FB27F; }
+.quiz-feedback.incorrect { color: #E8744A; }
+.quiz-feedback.hidden { display: none; }
+.quiz-explain { font-size: 13px; color: var(--on-ink-1); margin: 8px 0 0; line-height: 1.6; max-width: none; }
+
+.site-footer {
+  display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; justify-content: space-between;
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted); border-top: 2px solid var(--rule); padding-top: 16px; margin-top: 64px;
+}
+
+/* ── Mobile ── */
+@media (max-width: 900px) {
+  body::before {
+    content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 50; background: var(--ink);
+  }
+  .mobile-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--ink);
+    padding-block: 12px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .mobile-bar .nav-brand { padding: 0; margin: 0; }
+  .layout-container { display: block; }
+  .sidebar {
+    position: fixed; top: 0; bottom: 0; left: 0; height: auto; width: min(290px, 86vw); z-index: 40;
+    transform: translateX(-100%); visibility: hidden; transition: transform 250ms ease, visibility 250ms ease;
+    padding-top: calc(24px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .sidebar.open { transform: none; visibility: visible; }
+  .main-content {
+    max-width: 100%;
+    padding-block: 28px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .section-block, .endpoint { scroll-margin-top: 72px; }
+  .section-num-big { font-size: 36px; }
+  .section-title { font-size: 22px; }
+  .hero { margin-bottom: 48px; padding-bottom: 32px; }
+  .flag-table, .compare-table { font-size: 13px; }
+  .flag-table td, .flag-table th { padding: 8px 10px; }
+  .compare-table td, .compare-table th { padding: 10px 12px; }
+  .quiz-box { padding: 18px; }
+  .endpoint, .verdict-card { padding: 16px 14px 6px; }
+  .port-callout { flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px; }
+  .port-num { font-size: 52px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="mobile-bar">
+  <div class="nav-brand"><div class="logo">Last Server Standing<span class="accent-dot">.</span></div></div>
+  <button class="menu-btn" id="menuBtn" type="button" aria-controls="sidebar" aria-expanded="false">
+    <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1 3h12M1 7h12M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Sections
+  </button>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+
+<div class="layout-container">
+
+<nav class="sidebar" id="sidebar" aria-label="Sections">
+  <div class="nav-brand">
+    <div class="logo">Last Server Standing<span class="accent-dot">.</span></div>
+    <div class="sub">Sheryians Coding School · Kodr</div>
+  </div>
+
+  <div class="nav-group-label">The challenge</div>
+  <a href="#overview" class="nav-link active"><span class="nav-num">1</span>Overview</a>
+  <a href="#machine" class="nav-link"><span class="nav-num">2</span>Your machine</a>
+
+  <div class="nav-group-label">What you build</div>
+  <a href="#conventions" class="nav-link"><span class="nav-num">3</span>Port &amp; conventions</a>
+  <a href="#endpoints" class="nav-link"><span class="nav-num">4</span>Endpoints</a>
+  <a href="#order-rules" class="nav-link"><span class="nav-num">5</span>Rules of the sale</a>
+
+  <div class="nav-group-label">How you're tested</div>
+  <a href="#pipeline" class="nav-link"><span class="nav-num">6</span>Test pipeline</a>
+  <a href="#load" class="nav-link"><span class="nav-num">7</span>Load profile</a>
+  <a href="#scoring" class="nav-link"><span class="nav-num">8</span>Scoring</a>
+
+  <div class="nav-group-label">Rules</div>
+  <a href="#conditions" class="nav-link"><span class="nav-num">9</span>Server conditions</a>
+  <a href="#poor-examples" class="nav-link"><span class="nav-num">10</span>Poor examples</a>
+  <a href="#preflight" class="nav-link"><span class="nav-num">11</span>Pre-flight checklist</a>
+  <a href="#faq" class="nav-link"><span class="nav-num">12</span>FAQ</a>
+</nav>
+
+<main class="main-content">
+<div class="content">
+
+<!-- ═════════ HERO ═════════ -->
+<header class="hero animate-fade-up">
+  <div class="hero-eyebrow">Kodr challenge · Coder 4 × Coder 5 · Rules &amp; API spec</div>
+  <h1>Same machine. Any language. <em>Last server standing</em> wins.</h1>
+  <p class="hero-desc">Every participant gets an identical 2 vCPU / 8 GB machine and builds the same flash-sale API, in any language they like. Then we send every server the same rising load until it breaks. Your score is the highest load your server handled <strong>correctly</strong>: fast, almost no errors, and without selling a single unit it didn't have.</p>
+  <div class="hero-tags">
+    <span class="hero-tag hot">Port 8080</span>
+    <span class="hero-tag">m7i.large · 2 vCPU · 8 GB</span>
+    <span class="hero-tag">6 endpoints</span>
+    <span class="hero-tag">Any language</span>
+    <span class="hero-tag">Score = max req/s</span>
+    <span class="hero-tag">Rules v1.1 · 18 Nov 2026</span>
+  </div>
+</header>
+
+<!-- ═════════ 01 OVERVIEW ═════════ -->
+<section class="section-block animate-fade-up" id="overview">
+  <div class="section-header">
+    <div class="section-num-big">01</div>
+    <div class="section-header-text">
+      <div class="section-title">Overview</div>
+      <div class="section-subtitle">What you build, what wins, and three words you need to know</div>
+    </div>
+  </div>
+
+  <h3>The challenge</h3>
+  <p>You build a small API for a <strong>flash-sale shop</strong>. Products can be created, read, listed by category, and bought. That's it: six endpoints, all described exactly in section 04.</p>
+  <p>Use any language, framework and database you like. The only limit is the machine. Everything — your app, your database, your cache — has to run on the one box we give you.</p>
+  <p>On test day we send your server traffic at a rising rate: 500 requests per second for 30 seconds, then 1,000, then 1,500, and so on, until your server can't keep up. <strong>Your score is the highest rate it handled correctly.</strong></p>
+
+  <h3>What "handled correctly" means</h3>
+  <div class="concept-grid">
+    <div class="concept-box">
+      <div class="concept-box-label">Fast</div>
+      <p class="concept-box-text">99% of requests answered within <strong>100 ms</strong>.</p>
+    </div>
+    <div class="concept-box">
+      <div class="concept-box-label">Reliable</div>
+      <p class="concept-box-text">No more than <strong>1%</strong> of requests fail: timeouts, crashes, 5xx, refused connections.</p>
+    </div>
+    <div class="concept-box">
+      <div class="concept-box-label">Correct</div>
+      <p class="concept-box-text"><strong>Zero</strong> wrong answers. A fast wrong answer is worth nothing.</p>
+    </div>
+  </div>
+  <div class="warning-box">
+    <div class="warning-box-icon">⚠️</div>
+    <p class="warning-box-text"><strong>And honest.</strong> After the run we audit every product and every order. Sell more units than you had, or let one user buy the same product twice, and you're disqualified, however fast you were.</p>
+  </div>
+
+  <h3>Three words you need</h3>
+  <div class="concept-grid">
+    <div class="concept-box">
+      <div class="concept-box-label">Key Concept · req/s</div>
+      <p class="concept-box-text"><strong>Requests per second</strong>, the rate we send traffic at. Level 7 means 5,000 requests arrive every second for 30 seconds: 150,000 requests in total.</p>
+    </div>
+    <div class="concept-box">
+      <div class="concept-box-label">Key Concept · p99 latency</div>
+      <p class="concept-box-text">Line up every response time in a level, fastest to slowest. <strong>p99</strong> is the time that 99% of them beat. If 1 request in 50 takes a full second, your average still looks fine, but your p99 is about a second. Averages hide slow requests; p99 doesn't.</p>
+    </div>
+    <div class="concept-box">
+      <div class="concept-box-label">Key Concept · Flash sale</div>
+      <p class="concept-box-text">A few units, a huge crowd, one moment. 100 phones, 5,000 people pressing Buy in the same second. Speed is the easy part. The hard part is making <strong>100 units turn into exactly 100 orders</strong>.</p>
+    </div>
+  </div>
+
+  <h3>Event details</h3>
+  <div class="table-wrap">
+    <table class="flag-table">
+      <thead><tr><th>What</th><th>When / details</th></tr></thead>
+      <tbody>
+        <tr><td>Format</td><td><strong>Solo.</strong> One participant, one machine.</td></tr>
+        <tr><td>Kickoff — you get this spec and your machine</td><td><span class="badge badge-gold">TBA</span></td></tr>
+        <tr><td>Practice round(s) — the real test, with a report afterwards</td><td><span class="badge badge-gold">TBA</span></td></tr>
+        <tr><td>Code freeze — SSH and internet switched off</td><td><span class="badge badge-gold">TBA</span></td></tr>
+        <tr><td>Finals — live, one participant at a time</td><td><span class="badge badge-gold">TBA</span></td></tr>
+        <tr><td>Debrief — the top finishers explain their design</td><td><span class="badge badge-gold">TBA</span></td></tr>
+        <tr><td>Prizes</td><td><span class="badge badge-gold">TBA</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═════════ 02 MACHINE ═════════ -->
+<section class="section-block animate-fade-up" id="machine">
+  <div class="section-header">
+    <div class="section-num-big">02</div>
+    <div class="section-header-text">
+      <div class="section-title">Your machine</div>
+      <div class="section-subtitle">Identical for everyone. The only difference is what you run on it.</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="flag-table">
+      <tbody>
+        <tr><td class="k">Instance</td><td>AWS EC2 <strong>m7i.large</strong></td></tr>
+        <tr><td class="k">CPU</td><td>2 vCPU — one physical core running two threads (4th Gen Intel Xeon)</td></tr>
+        <tr><td class="k">Memory</td><td>8 GiB</td></tr>
+        <tr><td class="k">Disk</td><td>30 GiB gp3 SSD · 3,000 IOPS · 125 MB/s</td></tr>
+        <tr><td class="k">OS</td><td>Ubuntu Server 24.04 LTS (x86_64)</td></tr>
+        <tr><td class="k">Location</td><td>Same AWS availability zone as the load generator, so the network is the same for everyone</td></tr>
+        <tr><td class="k">Login</td><td><code>ssh -i your-key.pem ubuntu@&lt;public-ip&gt;</code> · full <code>sudo</code></td></tr>
+        <tr><td class="k">Pre-installed</td><td>Nothing beyond the base image. Install whatever you need.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note-box">
+    <div class="note-box-icon">💡</div>
+    <p class="note-box-text"><strong>2 vCPU is less than it sounds.</strong> On this instance it's one physical core running two threads, and your app, your database and everything else share it. Plan for that.</p>
+  </div>
+
+  <h3>Network</h3>
+  <div class="table-wrap">
+    <table class="compare-table">
+      <thead><tr><th></th><th>Build phase</th><th>After code freeze</th></tr></thead>
+      <tbody>
+        <tr><td class="cell-title">SSH (port 22)</td><td class="cell-highlight">Open</td><td>Closed</td></tr>
+        <tr><td class="cell-title">Outbound internet (apt, npm, docker pull, git)</td><td class="cell-highlight">Open</td><td>Blocked</td></tr>
+        <tr><td class="cell-title">Port 8080</td><td>Load generator only</td><td>Load generator only</td></tr>
+        <tr><td class="cell-title">Every other port</td><td class="cell-muted">Closed</td><td class="cell-muted">Closed</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Port 8080 is never open to the internet, not even to your laptop. That's how we stop participants from load-testing each other. To call your API from your laptop, open an SSH tunnel:</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-label">bash · on your laptop</span><button type="button" class="code-copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre class="code-pre" data-lang="bash"># keep this terminal open: it forwards your laptop's 8080 to the box
+ssh -i your-key.pem -N -L 8080:localhost:8080 ubuntu@&lt;public-ip&gt;
+
+# then, in another terminal on your laptop
+curl http://localhost:8080/health</pre>
+  </div>
+
+  <div class="warning-box">
+    <div class="warning-box-icon">🚫</div>
+    <p class="warning-box-text"><strong>Your machine is the only one you touch.</strong> Scanning, connecting to or load-testing anyone else's machine, the load generator or the AWS account is an instant disqualification.</p>
+  </div>
+</section>
+
+<!-- ═════════ 03 PORT & CONVENTIONS ═════════ -->
+<section class="section-block animate-fade-up" id="conventions">
+  <div class="section-header">
+    <div class="section-num-big">03</div>
+    <div class="section-header-text">
+      <div class="section-title">Port &amp; conventions</div>
+      <div class="section-subtitle">Where your server listens and the rules every endpoint follows</div>
+    </div>
+  </div>
+
+  <div class="port-callout">
+    <div class="port-num">8080</div>
+    <p class="port-text"><strong>Your server listens on port 8080, on all interfaces (<code>0.0.0.0</code>).</strong> Not <code>127.0.0.1</code>, not 3000, not 5000. We call <code>http://&lt;your-private-ip&gt;:8080</code> from another machine. Whatever answers on 8080 is your server, so an nginx in front of your app is fine.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table class="flag-table">
+      <tbody>
+        <tr><td class="k">Base URL</td><td><code>http://&lt;private-ip&gt;:8080</code>. Routes start right at <code>/</code>, with no <code>/api</code> prefix.</td></tr>
+        <tr><td class="k">Protocol</td><td>Plain HTTP/1.1 with keep-alive. No HTTPS.</td></tr>
+        <tr><td class="k">Bodies</td><td>JSON. We send <code>Content-Type: application/json</code>; send it back on your responses too.</td></tr>
+        <tr><td class="k">IDs</td><td>Strings, 1–64 characters. Ours use only lowercase letters and digits.</td></tr>
+        <tr><td class="k">Numbers</td><td>Whole numbers only. <code>price</code> is in rupees.</td></tr>
+        <tr><td class="k">Errors</td><td>The right status code plus <code>{"error": "CODE"}</code>. An extra <code>message</code> field is fine.</td></tr>
+        <tr><td class="k">Extra fields</td><td>Ignored everywhere. Mongo's <code>_id</code> and <code>__v</code> won't hurt you.</td></tr>
+        <tr><td class="k">Missing fields</td><td>A wrong answer. Every field in this spec must be there, with the right type.</td></tr>
+        <tr><td class="k">Field order</td><td>Doesn't matter.</td></tr>
+        <tr><td class="k">Auth</td><td>None.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Error codes</h3>
+  <p>These are the only five. Use the exact spelling.</p>
+  <div class="table-wrap">
+    <table class="flag-table">
+      <thead><tr><th>Status</th><th>error</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td class="num">400</td><td class="mono">VALIDATION_ERROR</td><td>A required field or query parameter is missing, empty or the wrong type</td></tr>
+        <tr><td class="num">404</td><td class="mono">PRODUCT_NOT_FOUND</td><td>No product with that id</td></tr>
+        <tr><td class="num">409</td><td class="mono">PRODUCT_EXISTS</td><td><code>POST /products</code> with an id that's already taken</td></tr>
+        <tr><td class="num">409</td><td class="mono">ALREADY_PURCHASED</td><td>This user already bought this product</td></tr>
+        <tr><td class="num">409</td><td class="mono">SOLD_OUT</td><td>The product's stock is 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═════════ 04 ENDPOINTS ═════════ -->
+<section class="section-block animate-fade-up" id="endpoints">
+  <div class="section-header">
+    <div class="section-num-big">04</div>
+    <div class="section-header-text">
+      <div class="section-title">Endpoints</div>
+      <div class="section-subtitle">Six routes. Build them exactly like this: the tests check every field and every status code.</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="flag-table wide">
+      <thead><tr><th>Method</th><th>Path</th><th>What it does</th><th>Share of the load</th></tr></thead>
+      <tbody>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono-path">/health</td><td>Ready check</td><td class="muted">Only before testing</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono-path">/products</td><td>Create a product</td><td class="muted">Seeding + 1 flash drop per level</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono-path">/products/:id</td><td>Read one product</td><td class="num">60%</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono-path">/products?category=…</td><td>List a category, page by page</td><td class="num">15%</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono-path">/orders</td><td>Buy one unit</td><td class="num">20%</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono-path">/users/:userId/orders</td><td>One user's orders</td><td class="num">5%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The product object</h3>
+  <p>Three of the endpoints return it.</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-label">json · product</span><button type="button" class="code-copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre class="code-pre" data-lang="json">{
+  "id": "p3f9a0c2e71bd",
+  "name": "Pixel 10 Pro 256GB",
+  "category": "c8d21fa",
+  "price": 79999,
+  "stock": 120
+}</pre>
+  </div>
+  <div class="table-wrap">
+    <table class="flag-table compact">
+      <thead><tr><th>Field</th><th>Type</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">id</td><td class="muted">string</td><td>1–64 characters, unique</td></tr>
+        <tr><td class="mono">name</td><td class="muted">string</td><td>1–200 characters</td></tr>
+        <tr><td class="mono">category</td><td class="muted">string</td><td>1–64 characters</td></tr>
+        <tr><td class="mono">price</td><td class="muted">integer</td><td>≥ 0, in rupees</td></tr>
+        <tr><td class="mono">stock</td><td class="muted">integer</td><td>≥ 0, units left</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Once a product is created, its <code>id</code>, <code>name</code>, <code>category</code> and <code>price</code> never change. Only <code>stock</code> does, and only through orders. Nothing is ever deleted.</p>
+
+  <h3>The sample shop</h3>
+  <p>Every sample on this page uses the same small shop, so you can follow one product and one user through every endpoint.</p>
+  <div class="table-wrap">
+    <table class="flag-table compact">
+      <thead><tr><th>What</th><th>id</th><th>Details</th></tr></thead>
+      <tbody>
+        <tr><td>Category</td><td class="mono">c8d21fa</td><td>214 products, including the three below</td></tr>
+        <tr><td>Product</td><td class="mono">p3f9a0c2e71bd</td><td>Pixel 10 Pro 256GB · ₹79,999 · created with 120 units</td></tr>
+        <tr><td>Product</td><td class="mono">p0c4be91a3f25</td><td>Steel Bottle 1L · ₹349 · created with 100,000 units</td></tr>
+        <tr><td>Product</td><td class="mono">p7d2e05b1c9aa</td><td>Phone Case · ₹349 · created with 100,000 units</td></tr>
+        <tr><td>Flash drop</td><td class="mono">p9e1d7c40b2a6</td><td>Air Fryer 4L · ₹2,999 · category <span class="mono">cf1a2b9</span> · already sold out</td></tr>
+        <tr><td>User</td><td class="mono">u7b0e44c19a2f</td><td>Has bought the Pixel and the Steel Bottle</td></tr>
+        <tr><td>User</td><td class="mono">u3c9a1f08d7e2</td><td>Hasn't bought anything</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- GET /health -->
+  <div class="endpoint" id="ep-health">
+    <div class="endpoint-head"><span class="method m-get">GET</span><span class="endpoint-path">/health</span><span class="endpoint-what">· ready check</span></div>
+    <p>Return 200 only when you're ready for real traffic: database connected, anything you preload already loaded. Before each run we poll this once a second, and testing starts as soon as it says ok.</p>
+    <h4>Sample responses</h4>
+    <div class="resp-grid">
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">200 · ready</span></div>
+<pre class="code-pre" data-lang="http"># request
+GET /health
+
+# response · 200 OK
+{ "status": "ok" }</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">503 · not ready yet (example)</span></div>
+<pre class="code-pre" data-lang="http"># request: database still connecting
+GET /health
+
+# response · 503 Service Unavailable
+{ "status": "starting" }</pre>
+      </div>
+    </div>
+    <p class="muted">Any status other than 200 means "not ready", so the 503 body is up to you.</p>
+  </div>
+
+  <!-- POST /products -->
+  <div class="endpoint" id="ep-create-product">
+    <div class="endpoint-head"><span class="method m-post">POST</span><span class="endpoint-path">/products</span><span class="endpoint-what">· create a product</span></div>
+    <p>We use this to seed 10,000 products before the ramp, and to launch one flash drop at the start of every level.</p>
+    <div class="table-wrap">
+      <table class="flag-table">
+        <thead><tr><th>Status</th><th>Body</th><th>When</th></tr></thead>
+        <tbody>
+          <tr><td class="num">201</td><td>The product object, as stored</td><td>Created</td></tr>
+          <tr><td class="num">400</td><td class="mono">VALIDATION_ERROR</td><td>Any field missing, empty or the wrong type; <code>price</code> or <code>stock</code> negative or not a whole number</td></tr>
+          <tr><td class="num">409</td><td class="mono">PRODUCT_EXISTS</td><td>The id is taken. Leave the existing product exactly as it was.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h4>Sample responses</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">201 · created</span></div>
+<pre class="code-pre" data-lang="http"># request
+POST /products
+{
+  "id": "p3f9a0c2e71bd",
+  "name": "Pixel 10 Pro 256GB",
+  "category": "c8d21fa",
+  "price": 79999,
+  "stock": 120
+}
+
+# response · 201 Created
+{
+  "id": "p3f9a0c2e71bd",
+  "name": "Pixel 10 Pro 256GB",
+  "category": "c8d21fa",
+  "price": 79999,
+  "stock": 120
+}</pre>
+    </div>
+    <div class="resp-grid">
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">400 · VALIDATION_ERROR</span></div>
+<pre class="code-pre" data-lang="http"># request: price is negative
+POST /products
+{
+  "id": "p5b2c8e1f0a93",
+  "name": "Electric Kettle",
+  "category": "c8d21fa",
+  "price": -5,
+  "stock": 10
+}
+
+# response · 400 Bad Request
+{ "error": "VALIDATION_ERROR" }</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">409 · PRODUCT_EXISTS</span></div>
+<pre class="code-pre" data-lang="http"># request: the Pixel's id, again
+POST /products
+{
+  "id": "p3f9a0c2e71bd",
+  "name": "Pixel 10 Pro 512GB",
+  "category": "c8d21fa",
+  "price": 89999,
+  "stock": 50
+}
+
+# response · 409 Conflict
+{ "error": "PRODUCT_EXISTS" }</pre>
+      </div>
+    </div>
+    <p class="muted">After the 409, the original Pixel still has its own name, price and stock.</p>
+  </div>
+
+  <!-- GET /products/:id -->
+  <div class="endpoint" id="ep-get-product">
+    <div class="endpoint-head"><span class="method m-get">GET</span><span class="endpoint-path">/products/:id</span><span class="endpoint-what">· read one product</span></div>
+    <p>The busiest route: 60% of all traffic, and a small set of popular products gets most of it.</p>
+    <div class="table-wrap">
+      <table class="flag-table">
+        <thead><tr><th>Status</th><th>Body</th><th>When</th></tr></thead>
+        <tbody>
+          <tr><td class="num">200</td><td>The product object</td><td>Found. <code>stock</code> may be up to 2 seconds old (section 05).</td></tr>
+          <tr><td class="num">404</td><td class="mono">PRODUCT_NOT_FOUND</td><td>No product with that id</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h4>Sample responses</h4>
+    <div class="resp-grid">
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">200 · found</span></div>
+<pre class="code-pre" data-lang="http"># request: after one Pixel was sold
+GET /products/p3f9a0c2e71bd
+
+# response · 200 OK
+{
+  "id": "p3f9a0c2e71bd",
+  "name": "Pixel 10 Pro 256GB",
+  "category": "c8d21fa",
+  "price": 79999,
+  "stock": 119
+}</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">404 · PRODUCT_NOT_FOUND</span></div>
+<pre class="code-pre" data-lang="http"># request: no product has this id
+GET /products/p000000000000
+
+# response · 404 Not Found
+{ "error": "PRODUCT_NOT_FOUND" }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET /products?category= -->
+  <div class="endpoint" id="ep-list-products">
+    <div class="endpoint-head"><span class="method m-get">GET</span><span class="endpoint-path">/products?category=…&amp;page=…&amp;limit=…</span><span class="endpoint-what">· list a category</span></div>
+    <div class="table-wrap">
+      <table class="flag-table">
+        <thead><tr><th>Param</th><th>Required?</th><th>Valid values</th><th>Otherwise</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">category</td><td>Yes</td><td>A non-empty string</td><td>400 <span class="mono">VALIDATION_ERROR</span></td></tr>
+          <tr><td class="mono">page</td><td>No, default <code>1</code></td><td>A whole number ≥ 1</td><td>400 <span class="mono">VALIDATION_ERROR</span></td></tr>
+          <tr><td class="mono">limit</td><td>No, default <code>20</code></td><td>A whole number from 1 to 50</td><td>400 <span class="mono">VALIDATION_ERROR</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>Sort order:</strong> by <code>price</code>, cheapest first. Equal prices are ordered by <code>id</code>, in plain character order. Our ids use only lowercase letters and digits, so your database's default string sort gets this right. Prices repeat a lot on purpose: the tie-break is tested.</p>
+    <ul class="plain-list">
+      <li><code>total</code> is the number of products in this category, across all pages.</li>
+      <li>A page past the end → 200 with <code>"items": []</code> and the real <code>total</code>.</li>
+      <li>A category with no products → 200 with <code>"items": []</code> and <code>"total": 0</code>.</li>
+      <li><code>stock</code> inside <code>items</code> may be up to 2 seconds old.</li>
+    </ul>
+    <h4>Sample responses</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">200 · a page</span></div>
+<pre class="code-pre" data-lang="http"># request: the two cheapest products in c8d21fa
+GET /products?category=c8d21fa&amp;page=1&amp;limit=2
+
+# response · 200 OK (same price, so ordered by id)
+{
+  "items": [
+    { "id": "p0c4be91a3f25", "name": "Steel Bottle 1L", "category": "c8d21fa", "price": 349, "stock": 99999 },
+    { "id": "p7d2e05b1c9aa", "name": "Phone Case", "category": "c8d21fa", "price": 349, "stock": 99987 }
+  ],
+  "page": 1,
+  "limit": 2,
+  "total": 214
+}</pre>
+    </div>
+    <div class="resp-grid">
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">200 · past the last page</span></div>
+<pre class="code-pre" data-lang="http"># request: 214 products = 11 pages of 20
+GET /products?category=c8d21fa&amp;page=20
+
+# response · 200 OK
+{
+  "items": [],
+  "page": 20,
+  "limit": 20,
+  "total": 214
+}</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">200 · empty category</span></div>
+<pre class="code-pre" data-lang="http"># request: nobody created this category
+GET /products?category=c000000
+
+# response · 200 OK
+{
+  "items": [],
+  "page": 1,
+  "limit": 20,
+  "total": 0
+}</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">400 · VALIDATION_ERROR</span></div>
+<pre class="code-pre" data-lang="http"># request: limit is above 50
+GET /products?category=c8d21fa&amp;limit=80
+
+# response · 400 Bad Request
+{ "error": "VALIDATION_ERROR" }</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">400 · VALIDATION_ERROR</span></div>
+<pre class="code-pre" data-lang="http"># request: no category at all
+GET /products?page=2
+
+# response · 400 Bad Request
+{ "error": "VALIDATION_ERROR" }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST /orders -->
+  <div class="endpoint" id="ep-create-order">
+    <div class="endpoint-head"><span class="method m-post">POST</span><span class="endpoint-path">/orders</span><span class="endpoint-what">· buy one unit</span></div>
+    <p>Every order buys <strong>exactly one unit</strong>. A user can buy each product <strong>at most once</strong>, ever.</p>
+    <div class="table-wrap">
+      <table class="flag-table">
+        <thead><tr><th>Status</th><th>Body</th><th>When</th></tr></thead>
+        <tbody>
+          <tr><td class="num">201</td><td>The order</td><td>Bought. Stock goes down by exactly 1.</td></tr>
+          <tr><td class="num">400</td><td class="mono">VALIDATION_ERROR</td><td><code>userId</code> or <code>productId</code> missing, empty or not a string</td></tr>
+          <tr><td class="num">404</td><td class="mono">PRODUCT_NOT_FOUND</td><td>No product with that id</td></tr>
+          <tr><td class="num">409</td><td class="mono">ALREADY_PURCHASED</td><td>This user already has an order for this product</td></tr>
+          <tr><td class="num">409</td><td class="mono">SOLD_OUT</td><td>Stock is 0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><code>orderId</code> is any non-empty string you generate, unique across all orders.</p>
+    <div class="note-box">
+      <div class="note-box-icon">💡</div>
+      <div class="note-box-text"><strong>Which error wins</strong>
+        <ul class="note-list">
+          <li>Check in this order: 400, then 404, then 409.</li>
+          <li>If the user already owns the product <em>and</em> it's sold out, either 409 is accepted.</li>
+          <li>When you answer with any error, nothing changes: no stock is taken and no order is saved.</li>
+        </ul>
+      </div>
+    </div>
+    <h4>Sample responses</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label">201 · bought</span></div>
+<pre class="code-pre" data-lang="http"># request: u7b0e44c19a2f buys the Pixel
+POST /orders
+{ "userId": "u7b0e44c19a2f", "productId": "p3f9a0c2e71bd" }
+
+# response · 201 Created (Pixel stock goes from 120 to 119)
+{ "orderId": "o_5f2a9c", "userId": "u7b0e44c19a2f", "productId": "p3f9a0c2e71bd" }</pre>
+    </div>
+    <div class="resp-grid">
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">400 · VALIDATION_ERROR</span></div>
+<pre class="code-pre" data-lang="http"># request: productId is missing
+POST /orders
+{ "userId": "u7b0e44c19a2f" }
+
+# response · 400 Bad Request
+{ "error": "VALIDATION_ERROR" }</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">404 · PRODUCT_NOT_FOUND</span></div>
+<pre class="code-pre" data-lang="http"># request: no product has this id
+POST /orders
+{
+  "userId": "u7b0e44c19a2f",
+  "productId": "p000000000000"
+}
+
+# response · 404 Not Found
+{ "error": "PRODUCT_NOT_FOUND" }</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">409 · ALREADY_PURCHASED</span></div>
+<pre class="code-pre" data-lang="http"># request: the same user buys the Pixel again
+POST /orders
+{
+  "userId": "u7b0e44c19a2f",
+  "productId": "p3f9a0c2e71bd"
+}
+
+# response · 409 Conflict
+{ "error": "ALREADY_PURCHASED" }</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">409 · SOLD_OUT</span></div>
+<pre class="code-pre" data-lang="http"># request: the Air Fryer drop has 0 units left
+POST /orders
+{
+  "userId": "u3c9a1f08d7e2",
+  "productId": "p9e1d7c40b2a6"
+}
+
+# response · 409 Conflict
+{ "error": "SOLD_OUT" }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- GET /users/:userId/orders -->
+  <div class="endpoint" id="ep-user-orders">
+    <div class="endpoint-head"><span class="method m-get">GET</span><span class="endpoint-path">/users/:userId/orders</span><span class="endpoint-what">· one user's orders</span></div>
+    <ul class="plain-list">
+      <li>The orders can come back in any order. We compare them as a set.</li>
+      <li>A user with no orders → 200 with <code>"orders": []</code>, not 404.</li>
+      <li>May be up to 2 seconds old.</li>
+    </ul>
+    <h4>Sample responses</h4>
+    <div class="resp-grid">
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">200 · has orders</span></div>
+<pre class="code-pre" data-lang="http"># request
+GET /users/u7b0e44c19a2f/orders
+
+# response · 200 OK
+{
+  "userId": "u7b0e44c19a2f",
+  "orders": [
+    { "orderId": "o_5f2a9c", "productId": "p3f9a0c2e71bd" },
+    { "orderId": "o_91c07e", "productId": "p0c4be91a3f25" }
+  ]
+}</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">200 · no orders yet</span></div>
+<pre class="code-pre" data-lang="http"># request: a user who hasn't bought anything
+GET /users/u3c9a1f08d7e2/orders
+
+# response · 200 OK
+{
+  "userId": "u3c9a1f08d7e2",
+  "orders": []
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 05 RULES OF THE SALE ═════════ -->
+<section class="section-block animate-fade-up" id="order-rules">
+  <div class="section-header">
+    <div class="section-num-big">05</div>
+    <div class="section-header-text">
+      <div class="section-title">Rules of the sale</div>
+      <div class="section-subtitle">This is where most servers get disqualified. Read it twice.</div>
+    </div>
+  </div>
+
+  <h3>The books must balance</h3>
+  <p>After every run we check your data against everything we sent and everything you answered. All seven of these must hold. The examples use the sample shop from section 04.</p>
+  <ol class="rule-list">
+    <li><strong>No overselling.</strong> A product never has more successful orders than the stock it started with.
+      <div class="rule-ex">
+        <div class="ex ok"><span class="ex-mark">✓</span><span>The Air Fryer drop starts with 150 units and 4,000 buyers arrive. Exactly 150 get 201; the other 3,850 get <code>SOLD_OUT</code>.</span></div>
+        <div class="ex bad"><span class="ex-mark">✗</span><span>153 buyers get 201. Three people paid for air fryers that don't exist.</span></div>
+      </div>
+    </li>
+    <li><strong>Stock adds up.</strong> Final stock = starting stock − successful orders. Exactly.
+      <div class="rule-ex">
+        <div class="ex ok"><span class="ex-mark">✓</span><span>The Steel Bottle starts with 100,000 units and you answer 201 to 412 orders. At the audit it shows <code>"stock": 99588</code>.</span></div>
+        <div class="ex bad"><span class="ex-mark">✗</span><span>It shows <code>"stock": 99590</code>. Two orders were accepted but never took a unit.</span></div>
+      </div>
+    </li>
+    <li><strong>Never negative.</strong> No response, ever, shows stock below 0.
+      <div class="rule-ex">
+        <div class="ex ok"><span class="ex-mark">✓</span><span>The sold-out Air Fryer shows <code>"stock": 0</code>, however many people keep trying to buy it.</span></div>
+        <div class="ex bad"><span class="ex-mark">✗</span><span>One response, even once, shows <code>"stock": -2</code>.</span></div>
+      </div>
+    </li>
+    <li><strong>One per customer.</strong> A user gets at most one 201 per product, even when the same order arrives twice at the same instant.
+      <div class="rule-ex">
+        <div class="ex ok"><span class="ex-mark">✓</span><span><code>u7b0e44c19a2f</code> double-clicks Buy on the Pixel. One request gets 201, the other gets 409. A minute later they try again and get <code>ALREADY_PURCHASED</code>.</span></div>
+        <div class="ex bad"><span class="ex-mark">✗</span><span>Both clicks get 201, and the user now owns two Pixels.</span></div>
+      </div>
+    </li>
+    <li><strong>No lost orders.</strong> Every 201 we receive shows up in that user's order list.
+      <div class="rule-ex">
+        <div class="ex ok"><span class="ex-mark">✓</span><span>You answered 201 with <code>"orderId": "o_5f2a9c"</code>, and <code>GET /users/u7b0e44c19a2f/orders</code> lists <code>o_5f2a9c</code>.</span></div>
+        <div class="ex bad"><span class="ex-mark">✗</span><span>The list doesn't have it. You said "bought" but never saved the order, for example because it sat in an in-memory queue that got dropped.</span></div>
+      </div>
+    </li>
+    <li><strong>No ghost orders.</strong> Every order in a user's list was placed by us and accepted by you.
+      <div class="rule-ex">
+        <div class="ex ok"><span class="ex-mark">✓</span><span><code>u3c9a1f08d7e2</code> got <code>SOLD_OUT</code> for the Air Fryer, and their order list stays empty.</span></div>
+        <div class="ex bad"><span class="ex-mark">✗</span><span>Their list shows an Air Fryer order anyway, for example because you saved the order first, then found there was no stock and never deleted it.</span></div>
+      </div>
+    </li>
+    <li><strong>Sell-through.</strong> Every flash drop ends at stock 0. We send far more buyers than units, so leftover stock means you turned away buyers who should have got one.
+      <div class="rule-ex">
+        <div class="ex ok"><span class="ex-mark">✓</span><span>The Air Fryer drop starts with 150 units and ends with <code>"stock": 0</code> and 150 orders.</span></div>
+        <div class="ex bad"><span class="ex-mark">✗</span><span>It ends with <code>"stock": 37</code> while buyers were told <code>SOLD_OUT</code>, for example because a cached 0 was used to reject orders, or a failed order took a unit and never gave it back.</span></div>
+      </div>
+    </li>
+  </ol>
+  <div class="warning-box">
+    <div class="warning-box-icon">⚠️</div>
+    <p class="warning-box-text"><strong>Break any one of these and you're disqualified,</strong> whatever your score.</p>
+  </div>
+
+  <h3>What you may cache: the 2-second rule</h3>
+  <div class="table-wrap">
+    <table class="compare-table">
+      <thead><tr><th>Data</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td class="cell-title"><code>name</code>, <code>category</code>, <code>price</code></td><td class="cell-highlight">Never change. Cache them forever.</td></tr>
+        <tr><td class="cell-title"><code>stock</code> in <code>GET /products/:id</code> and in lists</td><td>May be up to 2 seconds old</td></tr>
+        <tr><td class="cell-title"><code>GET /users/:userId/orders</code></td><td>May be up to 2 seconds old</td></tr>
+        <tr><td class="cell-title">The stock check inside <code>POST /orders</code></td><td><strong>Must be exact.</strong> Never accept or reject an order based on a cached number.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>After the last request of a run we wait 3 seconds, then start the audit. By then every number must be exact.</p>
+
+  <h3>When one of our requests times out</h3>
+  <p>If we get no answer within 2 seconds, we can't tell whether that order went through, and sometimes your server can't either. So we accept both outcomes, as long as your stock and your order lists agree with each other.</p>
+
+  <div class="quiz-box">
+    <p class="quiz-question">A flash drop has 1 unit left. Two different users send <code>POST /orders</code> in the same millisecond. What's the only correct result?</p>
+    <div class="quiz-options" id="quiz-sale-1">
+      <button type="button" onclick="answerQuiz('quiz-sale-1', this, false)" class="quiz-option">A &nbsp;—&nbsp; Both get 201 and stock ends at 0. Close enough.</button>
+      <button type="button" onclick="answerQuiz('quiz-sale-1', this, true)" data-correct="true" class="quiz-option">B &nbsp;—&nbsp; One gets 201, the other gets 409 <code>SOLD_OUT</code>, and stock ends at 0.</button>
+    </div>
+    <div class="quiz-feedback hidden" id="quiz-sale-1-feedback"></div>
+    <p class="quiz-explain" id="quiz-sale-1-explain" hidden>Two 201s for one unit is an oversell (rule 1), and two sales from 1 unit can't honestly leave stock at 0 (rule 2). Exactly one buyer wins.</p>
+  </div>
+
+  <div class="quiz-box">
+    <p class="quiz-question">A user double-clicks Buy on a regular product with 100,000 units. Both requests arrive at the same instant. What must happen?</p>
+    <div class="quiz-options" id="quiz-sale-2">
+      <button type="button" onclick="answerQuiz('quiz-sale-2', this, true)" data-correct="true" class="quiz-option">A &nbsp;—&nbsp; Exactly one gets 201. The other gets a 409.</button>
+      <button type="button" onclick="answerQuiz('quiz-sale-2', this, false)" class="quiz-option">B &nbsp;—&nbsp; Both get 201. Two clicks, two orders.</button>
+    </div>
+    <div class="quiz-feedback hidden" id="quiz-sale-2-feedback"></div>
+    <p class="quiz-explain" id="quiz-sale-2-explain" hidden>One per customer (rule 4). The product isn't sold out, so exactly one request must succeed. Which 409 the other one gets doesn't matter.</p>
+  </div>
+</section>
+
+<!-- ═════════ 06 TEST PIPELINE ═════════ -->
+<section class="section-block animate-fade-up" id="pipeline">
+  <div class="section-header">
+    <div class="section-num-big">06</div>
+    <div class="section-header-text">
+      <div class="section-title">Test pipeline</div>
+      <div class="section-subtitle">Everything that happens to your server on test day, in order</div>
+    </div>
+  </div>
+
+  <div class="flow-diagram">
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot flow-dot-ink"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">1 · Code freeze</div>
+        <div class="flow-tag">everyone at once</div>
+        <div class="flow-desc">SSH and outbound internet are switched off on every machine. From here on nobody touches the boxes, us included.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot flow-dot-green"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">2 · Functional check</div>
+        <div class="flow-tag">about 1 minute · must be 100%</div>
+        <div class="flow-desc">About 40 requests covering every endpoint and every error case in section 04. One wrong answer and your run stops here.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot flow-dot-green"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">3 · Seeding</div>
+        <div class="flow-tag">unscored · 3-minute limit</div>
+        <div class="flow-desc">We create 10,000 products in 50 categories through <code>POST /products</code>, 50 requests at a time, in random order. Each one has 100,000 units, so these never sell out.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot flow-dot-green"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">4 · Warm-up</div>
+        <div class="flow-tag">60 s at 200 req/s · unscored</div>
+        <div class="flow-desc">The real traffic mix at a gentle rate, so JIT compilers, connection pools and caches can warm up. None of it is scored, but the audit at the end covers it too.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot flow-dot-accent"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">5 · The ramp</div>
+        <div class="flow-tag">scored · 30 s per level</div>
+        <div class="flow-desc">The rate climbs level by level (section 07). A new flash drop goes live at the start of each level. The run stops at the first level you fail.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-connector"><div class="flow-dot flow-dot-accent"></div></div>
+      <div class="flow-content">
+        <div class="flow-title">6 · Settle and audit</div>
+        <div class="flow-tag">decides disqualification</div>
+        <div class="flow-desc">Traffic stops. We wait 3 seconds, then check every product's stock, the order lists of every user involved in a double-click, a retry or a timeout, and a random sample of everyone else. This is where oversellers get caught.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-box">
+    <div class="note-box-icon">🔁</div>
+    <p class="note-box-text"><strong>Practice rounds run the same pipeline</strong>, minus the code freeze. Afterwards you get a report: which functional checks failed, and p50, p99, errors and wrong answers for every level you reached.</p>
+  </div>
+</section>
+
+<!-- ═════════ 07 LOAD PROFILE ═════════ -->
+<section class="section-block animate-fade-up" id="load">
+  <div class="section-header">
+    <div class="section-num-big">07</div>
+    <div class="section-header-text">
+      <div class="section-title">Load profile</div>
+      <div class="section-subtitle">How fast, what mix, and what a flash drop is</div>
+    </div>
+  </div>
+
+  <h3>Levels</h3>
+  <p>Each level lasts 30 seconds at a fixed arrival rate. We keep sending at that rate whether or not you've answered the earlier requests, so slowing down doesn't reduce the load. It piles it up.</p>
+  <div class="two-col">
+    <div class="table-wrap">
+      <table class="flag-table compact">
+        <thead><tr><th>Level</th><th>req/s</th><th>Requests in 30 s</th></tr></thead>
+        <tbody>
+          <tr><td class="k">L1</td><td class="num">500</td><td class="num">15,000</td></tr>
+          <tr><td class="k">L2</td><td class="num">1,000</td><td class="num">30,000</td></tr>
+          <tr><td class="k">L3</td><td class="num">1,500</td><td class="num">45,000</td></tr>
+          <tr><td class="k">L4</td><td class="num">2,000</td><td class="num">60,000</td></tr>
+          <tr><td class="k">L5</td><td class="num">3,000</td><td class="num">90,000</td></tr>
+          <tr><td class="k">L6</td><td class="num">4,000</td><td class="num">120,000</td></tr>
+          <tr><td class="k">L7</td><td class="num">5,000</td><td class="num">150,000</td></tr>
+          <tr><td class="k">L8</td><td class="num">6,500</td><td class="num">195,000</td></tr>
+          <tr><td class="k">L9</td><td class="num">8,000</td><td class="num">240,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table class="flag-table compact">
+        <thead><tr><th>Level</th><th>req/s</th><th>Requests in 30 s</th></tr></thead>
+        <tbody>
+          <tr><td class="k">L10</td><td class="num">10,000</td><td class="num">300,000</td></tr>
+          <tr><td class="k">L11</td><td class="num">12,500</td><td class="num">375,000</td></tr>
+          <tr><td class="k">L12</td><td class="num">15,000</td><td class="num">450,000</td></tr>
+          <tr><td class="k">L13</td><td class="num">20,000</td><td class="num">600,000</td></tr>
+          <tr><td class="k">L14</td><td class="num">25,000</td><td class="num">750,000</td></tr>
+          <tr><td class="k">L15</td><td class="num">30,000</td><td class="num">900,000</td></tr>
+          <tr><td class="k">L16</td><td class="num">40,000</td><td class="num">1,200,000</td></tr>
+          <tr><td class="k">L17</td><td class="num">50,000</td><td class="num">1,500,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p>Pass all 17 levels and you've beaten the test. Ties are then broken by p99 (section 08).</p>
+
+  <h3>Traffic mix</h3>
+  <div class="table-wrap">
+    <table class="flag-table wide">
+      <thead><tr><th>Request</th><th>Share</th><th>What we send</th></tr></thead>
+      <tbody>
+        <tr><td class="mono-path">GET /products/:id</td><td class="num">60%</td><td>Skewed popularity: a small set of products gets most of the reads, and the current flash drop gets plenty (people refreshing the page). About 2% ask for ids that don't exist: expect 404.</td></tr>
+        <tr><td class="mono-path">GET /products?category=…</td><td class="num">15%</td><td>A random category; mostly page 1, sometimes as deep as page 10; a limit of 10, 20 or 50.</td></tr>
+        <tr><td class="mono-path">POST /orders</td><td class="num">20%</td><td>About 70% go to the current flash drop and 30% to regular products, including retries and double-clicks (below).</td></tr>
+        <tr><td class="mono-path">GET /users/:userId/orders</td><td class="num">5%</td><td>Mostly users who have ordered, some who haven't.</td></tr>
+        <tr><td class="mono-path">POST /products</td><td class="num">1 per level</td><td>The flash drop.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Flash drops</h3>
+  <p>At the start of every level we create one new product with stock between 50 and 200, in a category of its own. For the next 30 seconds most orders go to it. It sells out within seconds, and after that buyers keep coming and must get <code>SOLD_OUT</code>.</p>
+
+  <h3>Retries and double-clicks</h3>
+  <ul class="plain-list">
+    <li><strong>Retry.</strong> About 3% of orders repeat an order the same user already won. Expect <code>ALREADY_PURCHASED</code> (or <code>SOLD_OUT</code>, if that product has sold out).</li>
+    <li><strong>Double-click.</strong> About 2% of orders are sent twice at the same instant. At most one may succeed, and on a product that isn't sold out, exactly one must. Which 409 the other one gets doesn't matter.</li>
+    <li><strong>Everything else</strong> is a user ordering a product for the first time. Expect 201 or <code>SOLD_OUT</code>, never <code>ALREADY_PURCHASED</code>. Regular products have 100,000 units, so <code>SOLD_OUT</code> on one of them is a wrong answer.</li>
+  </ul>
+
+  <h3>Connections and timeouts</h3>
+  <ul class="plain-list">
+    <li>HTTP/1.1 keep-alive, with anywhere from a few dozen to <strong>5,000 open connections</strong> at once. The slower you answer, the more of them pile up.</li>
+    <li>No answer within <strong>2 seconds</strong> counts as an error.</li>
+    <li>All of our traffic comes from <strong>one IP address</strong>: the load generator's.</li>
+  </ul>
+</section>
+
+<!-- ═════════ 08 SCORING ═════════ -->
+<section class="section-block animate-fade-up" id="scoring">
+  <div class="section-header">
+    <div class="section-num-big">08</div>
+    <div class="section-header-text">
+      <div class="section-title">Scoring</div>
+      <div class="section-subtitle">When a level passes, what your score is, and the four verdicts</div>
+    </div>
+  </div>
+
+  <h3>A level passes when all three hold</h3>
+  <div class="table-wrap">
+    <table class="compare-table wide">
+      <thead><tr><th>Check</th><th>Limit</th><th>What counts against you</th></tr></thead>
+      <tbody>
+        <tr><td class="cell-title">Latency</td><td class="num">p99 ≤ 100 ms</td><td>Measured at the load generator, across every request in the level</td></tr>
+        <tr><td class="cell-title">Errors</td><td class="num">≤ 1% of requests</td><td>No answer within 2 s · connection refused or reset · any 5xx · any 429 · requests we couldn't even send because every connection was stuck waiting on you</td></tr>
+        <tr><td class="cell-title">Wrong answers</td><td class="num">0</td><td>Wrong status code · missing or wrong field · invalid JSON · wrong list contents or order · stock above its starting value · <code>SOLD_OUT</code> on a regular product · <code>ALREADY_PURCHASED</code> on a first-time order</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Your score</h3>
+  <p>Your score is the rate of the highest level you pass. Pass level 7, fail level 8, and you score <strong>5,000 req/s</strong>.</p>
+<div class="scale-diagram"><span class="highlight">LEVEL   RATE       p99      ERRORS   WRONG   RESULT</span>
+L5      3,000/s    18 ms    0.0%     0       <span class="green">✓ pass</span>
+L6      4,000/s    27 ms    0.1%     0       <span class="green">✓ pass</span>
+L7      5,000/s    61 ms    0.4%     0       <span class="green">✓ pass</span>
+L8      6,500/s    340 ms   6.2%     0       <span class="red">✗ fail</span>   → <span class="highlight">score: 5,000 req/s</span></div>
+  <p><strong>Ties:</strong> the lower p99 on your highest passed level wins. Still tied: the lower error rate on that level.</p>
+
+  <h3>The four verdicts</h3>
+  <div class="legend">
+    <div class="legend-item"><span class="badge badge-accent">Disqualified</span>You broke a rule in section 09, or the audit found that the books don't balance (section 05). Not ranked, whatever your score.</div>
+    <div class="legend-item"><span class="badge badge-gold">Run fails</span>We couldn't test you: nothing answered on 8080, or you failed the functional check. Score 0.</div>
+    <div class="legend-item"><span class="badge badge-blue">Level fails</span>Too slow, too many errors, or a wrong answer. Your score stops at the level before.</div>
+    <div class="legend-item"><span class="badge badge-green">Legal but slow</span>No rule broken and no penalty. Just a lower score than you could have had.</div>
+  </div>
+
+  <div class="quiz-box">
+    <p class="quiz-question">Level 8: p99 is 42 ms, errors are 0.2%, and one response out of 195,000 had the wrong price for a product. Does level 8 pass?</p>
+    <div class="quiz-options" id="quiz-score-1">
+      <button type="button" onclick="answerQuiz('quiz-score-1', this, false)" class="quiz-option">A &nbsp;—&nbsp; Yes. 99.999% of the answers were right.</button>
+      <button type="button" onclick="answerQuiz('quiz-score-1', this, true)" data-correct="true" class="quiz-option">B &nbsp;—&nbsp; No. Wrong answers have zero tolerance.</button>
+    </div>
+    <div class="quiz-feedback hidden" id="quiz-score-1-feedback"></div>
+    <p class="quiz-explain" id="quiz-score-1-explain" hidden>Errors get a 1% budget because overloaded servers drop requests. Wrong answers get none: a server that gives wrong answers under load is worse than one that's slow.</p>
+  </div>
+</section>
+
+<!-- ═════════ 09 SERVER CONDITIONS ═════════ -->
+<section class="section-block animate-fade-up" id="conditions">
+  <div class="section-header">
+    <div class="section-num-big">09</div>
+    <div class="section-header-text">
+      <div class="section-title">Server conditions</div>
+      <div class="section-subtitle">What your server must do, what's allowed, and what gets you disqualified</div>
+    </div>
+  </div>
+
+  <h3>Your server must</h3>
+  <ol class="rule-list">
+    <li>Listen on <strong>port 8080</strong>, on all interfaces (<code>0.0.0.0</code>).</li>
+    <li>Implement every endpoint <strong>exactly</strong> as section 04 describes: paths, fields, status codes and error codes.</li>
+    <li>Run <strong>entirely on your machine</strong>: app, database, cache, queues, everything.</li>
+    <li><strong>Stay up</strong> for the whole run, and <strong>restart itself</strong> if it crashes, with no human help and no internet.</li>
+    <li><strong>Keep its data in a database on your box</strong>, meaning something that writes to disk. Memory is fine as a cache, but not as the only copy. We look at your code after the finals.</li>
+    <li>Follow the <strong>rules of the sale</strong> in section 05.</li>
+  </ol>
+
+  <div class="concept-grid">
+    <div class="concept-box ok">
+      <div class="concept-box-label">✓ Allowed</div>
+      <ul class="box-list">
+        <li>Any language, framework or runtime: Node, Bun, Deno, Go, Rust, Python, Java, C#…</li>
+        <li>Any database or cache that runs on your box: MongoDB, PostgreSQL, MySQL, SQLite, Redis…</li>
+        <li>Docker and Docker Compose</li>
+        <li>Several processes, clustering, worker threads, nginx in front, all on the one box</li>
+        <li>Caching in memory, within the 2-second rule</li>
+        <li>Tuning the OS: <code>sysctl</code>, file limits, swap, kernel settings</li>
+        <li>Open-source libraries and frameworks</li>
+        <li>AI coding tools, as long as you can explain every design decision at the debrief</li>
+      </ul>
+    </div>
+    <div class="concept-box no">
+      <div class="concept-box-label">✗ Not allowed · disqualification</div>
+      <ul class="box-list">
+        <li>Any service outside your machine: MongoDB Atlas, managed Redis, RDS, Supabase, Firebase, a friend's server, your laptop</li>
+        <li>Treating our traffic differently from real traffic, for example by spotting the load generator's IP, headers, user agent or timing</li>
+        <li>Hardcoded or pre-generated answers. Every response must come from data created during the run.</li>
+        <li>Touching anything that isn't your box: other participants' machines, the load generator, the AWS account</li>
+        <li>Running someone else's server code. Libraries are fine; another participant's code isn't.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 10 POOR EXAMPLES ═════════ -->
+<section class="section-block animate-fade-up" id="poor-examples">
+  <div class="section-header">
+    <div class="section-num-big">10</div>
+    <div class="section-header-text">
+      <div class="section-title">Poor examples</div>
+      <div class="section-subtitle">Mistakes we expect to see, what each one costs, and a hint toward the fix</div>
+    </div>
+  </div>
+
+  <p>Each example shows what goes wrong and which verdict it earns (section 08). The hints are only hints on purpose: working out the fix is the challenge.</p>
+
+  <div class="filter-bar" role="group" aria-label="Filter poor examples by verdict">
+    <span class="filter-label">Show</span>
+    <button type="button" class="filter-chip" data-filter="all" aria-pressed="true">All</button>
+    <button type="button" class="filter-chip" data-filter="dq" aria-pressed="false">Disqualified</button>
+    <button type="button" class="filter-chip" data-filter="run" aria-pressed="false">Run fails</button>
+    <button type="button" class="filter-chip" data-filter="level" aria-pressed="false">Level fails</button>
+    <button type="button" class="filter-chip" data-filter="slow" aria-pressed="false">Legal but slow</button>
+    <span class="filter-count" id="filterCount"></span>
+  </div>
+
+  <!-- DQ 1 -->
+  <div class="verdict-card" data-verdict="dq">
+    <div class="verdict-head"><span class="badge badge-accent">Disqualified</span><h3>The double-seller</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Express + Mongoose</span></div>
+<pre class="code-pre" data-lang="js">app.post('/orders', async (req, res) =&gt; {
+  const { userId, productId } = req.body;
+  const product = await Product.findOne({ id: productId });
+  if (!product) return res.status(404).json({ error: 'PRODUCT_NOT_FOUND' });
+  if (product.stock &lt; 1) return res.status(409).json({ error: 'SOLD_OUT' });
+
+  // In a flash drop, many requests reach this line
+  // while the database still says stock: 1
+  product.stock -= 1;
+  await product.save();
+
+  const order = await Order.create({ userId, productId });
+  res.status(201).json({ orderId: order.id, userId, productId });
+});</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>At 10 requests a second this passes every test. In a flash drop, many requests read <code>stock: 1</code> before any of them saves, and every one of them sells "the last unit". A 100-unit drop can easily end with 112 orders. That breaks rules 1 and 2.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Checking the stock and taking a unit have to be one atomic step. Look up conditional updates in your database: "take one unit, but only if there's one left", in a single query.</p>
+  </div>
+
+  <!-- DQ 2 -->
+  <div class="verdict-card" data-verdict="dq">
+    <div class="verdict-head"><span class="badge badge-accent">Disqualified</span><h3>Two clicks, two phones</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Express + Mongoose</span></div>
+<pre class="code-pre" data-lang="js">const existing = await Order.findOne({ userId, productId });
+if (existing) return res.status(409).json({ error: 'ALREADY_PURCHASED' });
+
+// A double-click sends two identical requests. Both run the
+// check above before either one inserts, so both pass it.
+await Order.create({ userId, productId });</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>Both requests ask "has this user bought it?" before either one has, both hear "no", and the user ends up with two. That breaks rule 4.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Don't ask the database whether a duplicate exists; make a duplicate impossible. A unique index on <code>(userId, productId)</code> turns the second insert into an error you can catch. Then think about what that means for stock you've already taken.</p>
+  </div>
+
+  <!-- DQ 3 -->
+  <div class="verdict-card" data-verdict="dq">
+    <div class="verdict-head"><span class="badge badge-accent">Disqualified</span><h3>Fake fast</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · three shortcuts</span></div>
+<pre class="code-pre" data-lang="js">// "Sold out of everything": zero database writes, very fast
+app.post('/orders', (req, res) =&gt; res.status(409).json({ error: 'SOLD_OUT' }));
+
+// A made-up product
+app.get('/products/:id', (req, res) =&gt;
+  res.json({ id: req.params.id, name: 'Phone', category: 'c1', price: 999, stock: 10 }));
+
+// Special treatment for the tester
+if (req.ip === LOAD_GENERATOR_IP) return res.json(cachedJunk);</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>Regular products have 100,000 units, so <code>SOLD_OUT</code> on one of them is a wrong answer, and every flash drop ends with stock left over (rule 7). Our ids, names and prices are random every run, so made-up data is wrong on the first request. And treating our traffic differently is against the rules on its own.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>There's no shortcut here. Only correct answers count.</p>
+  </div>
+
+  <!-- DQ 4 -->
+  <div class="verdict-card" data-verdict="dq">
+    <div class="verdict-head"><span class="badge badge-accent">Disqualified</span><h3>The goldfish database</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Node</span></div>
+<pre class="code-pre" data-lang="js">// The whole "database"
+const products = new Map();
+const orders = new Map();</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>Very fast, and the load test alone won't catch it. But if your process restarts once, the whole shop is gone: products start returning 404 and the audit finds nothing. It also breaks rule 5 in section 09, and we check that in your code after the finals.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Memory makes a great cache and a terrible source of truth. The real data has to live in something that writes to disk.</p>
+  </div>
+
+  <!-- DQ 5 -->
+  <div class="verdict-card" data-verdict="dq">
+    <div class="verdict-head"><span class="badge badge-accent">Disqualified</span><h3>The frozen price tag</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Express + Mongoose</span></div>
+<pre class="code-pre" data-lang="js">const cache = new Map();
+
+app.get('/products/:id', async (req, res) =&gt; {
+  const hit = cache.get(req.params.id);
+  if (hit) return res.json(hit);        // stock frozen at whatever it was the first time
+
+  const product = await Product.findOne({ id: req.params.id }).lean();
+  if (!product) return res.status(404).json({ error: 'PRODUCT_NOT_FOUND' });
+  cache.set(req.params.id, product);    // no expiry, never updated
+  res.json(product);
+});</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>During the run nothing looks wrong, because stock stays between 0 and its starting value. Then the audit asks about a flash drop that sold out ten minutes ago, and you answer <code>stock: 180</code>. Stock that's still stale at audit time means the books don't balance.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Split what never changes from what does. <code>name</code>, <code>category</code> and <code>price</code> can stay cached forever; <code>stock</code> needs a short life, or an update when an order lands.</p>
+  </div>
+
+  <!-- DQ 6 -->
+  <div class="verdict-card" data-verdict="dq">
+    <div class="verdict-head"><span class="badge badge-accent">Disqualified</span><h3>The outsourced database</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Mongoose</span></div>
+<pre class="code-pre" data-lang="js">mongoose.connect('mongodb+srv://shopuser:****@cluster0.ab1cd.mongodb.net/shop');</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>Works all week. At code freeze the internet is cut, the connection dies, and every request after that fails. It's against the rules anyway: your database runs on your box.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Install the database on the machine and connect over localhost, for example <code>mongodb://127.0.0.1:27017/shop</code>. Your database can listen on 127.0.0.1; only your API needs 0.0.0.0.</p>
+  </div>
+
+  <!-- RUN 1 -->
+  <div class="verdict-card" data-verdict="run">
+    <div class="verdict-head"><span class="badge badge-gold">Run fails</span><h3>Listening in the wrong place</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Express</span></div>
+<pre class="code-pre" data-lang="js">app.listen(3000);                // wrong port
+app.listen(8080, '127.0.0.1');   // right port, but only reachable from inside the box</pre>
+    </div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · FastAPI</span></div>
+<pre class="code-pre" data-lang="bash">uvicorn main:app --port 8080     # uvicorn binds to 127.0.0.1 unless you tell it otherwise</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>Our very first request, <code>GET /health</code>, gets "connection refused". We can't test what we can't reach.</p>
+    <p class="hint-line"><span class="lbl">Hint</span><code>app.listen(8080, '0.0.0.0')</code>, or <code>uvicorn main:app --host 0.0.0.0 --port 8080</code>. Then run <code>ss -tlnp | grep 8080</code> on the box: you want <code>0.0.0.0:8080</code> or <code>*:8080</code>, not <code>127.0.0.1:8080</code>.</p>
+  </div>
+
+  <!-- RUN 3 -->
+  <div class="verdict-card" data-verdict="run">
+    <div class="verdict-head"><span class="badge badge-gold">Run fails</span><h3>Crashes on bad input</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Express</span></div>
+<pre class="code-pre" data-lang="js">app.post('/orders', async (req, res) =&gt; {
+  const productId = req.body.productId.trim();   // no productId in the body → TypeError
+  // ...
+});</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>The functional check sends a body without <code>productId</code> and expects 400 <code>VALIDATION_ERROR</code>. On Express 5 this becomes a 500. On Express 4 it's an unhandled promise rejection, which kills the whole Node process, and if nothing restarts it, every request after that fails.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Validate every input before you use it, and make sure something brings your process back if it dies.</p>
+  </div>
+
+  <!-- RUN 4 -->
+  <div class="verdict-card" data-verdict="run">
+    <div class="verdict-head"><span class="badge badge-gold">Run fails</span><h3>Close enough isn't</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Express + Mongoose</span></div>
+<pre class="code-pre" data-lang="js">if (!product) return res.json({ message: 'Product not found' });   // 200 OK, should be 404 PRODUCT_NOT_FOUND
+if (product.stock &lt; 1) return res.status(400).send('Sold out');    // should be 409 { "error": "SOLD_OUT" }
+
+const items = await Product.find({ category })
+  .skip(page * limit)   // page starts at 1, so page 1 skips the first 20 products
+  .limit(limit);        // and no sort: the order is whatever the database feels like</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>Every one of these is a wrong answer. The functional check tests every status code, every error code and exact page contents, so a server that's "close enough" doesn't get past it.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Treat section 04 as a contract. Sort by price, then id. Page 1 starts at the first product.</p>
+  </div>
+
+  <!-- LEVEL 1 -->
+  <div class="verdict-card" data-verdict="level">
+    <div class="verdict-head"><span class="badge badge-blue">Level fails</span><h3>The polite server</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Express</span></div>
+<pre class="code-pre" data-lang="js">import rateLimit from 'express-rate-limit';
+
+app.use(rateLimit({ windowMs: 60_000, limit: 100 }));   // 100 requests per minute per IP</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>All of our traffic comes from one IP. After the first 100 requests every answer is a 429, which counts as an error, and you fail level 1.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Rate limiting is a real defence on real servers. Here it only defends you from points.</p>
+  </div>
+
+  <!-- SLOW 1 -->
+  <div class="verdict-card" data-verdict="slow">
+    <div class="verdict-head"><span class="badge badge-green">Legal but slow</span><h3>Dev habits in production</h3></div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · how it's started</span></div>
+<pre class="code-pre" data-lang="bash">nodemon server.js             # a file watcher that restarts your app
+npm run dev                   # usually the same thing
+uvicorn main:app --reload     # also a file watcher</pre>
+    </div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-label bad">✗ Poor example · Express</span></div>
+<pre class="code-pre" data-lang="js">app.use(morgan('dev'));                                            // a log line for every request
+app.use((req, res, next) =&gt; { console.log(req.body); next(); });</pre>
+    </div>
+    <p class="why-line"><span class="lbl">What happens</span>None of this breaks a rule. Watchers and dev servers just aren't built for load, and at 5,000 req/s, logging every request means 5,000 log writes a second competing with your real work.</p>
+    <p class="hint-line"><span class="lbl">Hint</span>Run the production command, and log only what you'd actually read.</p>
+  </div>
+</section>
+
+<!-- ═════════ 11 PRE-FLIGHT ═════════ -->
+<section class="section-block animate-fade-up" id="preflight">
+  <div class="section-header">
+    <div class="section-num-big">11</div>
+    <div class="section-header-text">
+      <div class="section-title">Pre-flight checklist</div>
+      <div class="section-subtitle">Go through this on your box before code freeze</div>
+    </div>
+  </div>
+
+  <div class="preflight-count" id="preflightCount"></div>
+  <ul class="preflight">
+    <li><label><input type="checkbox"><span><code>ss -tlnp | grep 8080</code> shows <code>0.0.0.0:8080</code> or <code>*:8080</code></span></label></li>
+    <li><label><input type="checkbox"><span><code>curl localhost:8080/health</code> returns 200 with <code>{"status":"ok"}</code></span></label></li>
+    <li><label><input type="checkbox"><span>Your database runs on this machine. No Atlas or other cloud URL anywhere in your config.</span></label></li>
+    <li><label><input type="checkbox"><span>If you kill your server process, it comes back on its own within a few seconds and your data is still there (test 3)</span></label></li>
+    <li><label><input type="checkbox"><span>Restarting your server doesn't need the internet (it's cut at code freeze): no <code>git pull</code>, <code>npm install</code> or image pulls on startup</span></label></li>
+    <li><label><input type="checkbox"><span>No <code>nodemon</code>, <code>--reload</code> or dev server</span></label></li>
+    <li><label><input type="checkbox"><span>Every endpoint returns exactly the status codes and error codes in section 04</span></label></li>
+    <li><label><input type="checkbox"><span>The last-unit test (test 1) prints exactly one 201</span></label></li>
+    <li><label><input type="checkbox"><span>The double-click test (test 2) prints exactly one 201</span></label></li>
+  </ul>
+
+  <h3>Test 1 · The last unit</h3>
+  <p>Create a product with exactly one unit, then let 50 different users try to buy it at the same time. Run it on the box.</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-label">bash · on your box</span><button type="button" class="code-copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre class="code-pre" data-lang="bash"># a product with exactly 1 unit
+curl -s -w '\n' -X POST localhost:8080/products -H 'content-type: application/json' \
+  -d '{"id":"plast1","name":"Last One","category":"ctest","price":100,"stock":1}'
+
+# 50 different users press Buy at the same moment (curl -Z sends them in parallel)
+args=()
+for i in $(seq 50); do
+  [ "$i" -gt 1 ] &amp;&amp; args+=(--next)
+  args+=(-s -o /dev/null -w '%{http_code}\n' -X POST -H 'content-type: application/json' \
+         -d "{\"userId\":\"u$i\",\"productId\":\"plast1\"}" http://localhost:8080/orders)
+done
+curl -Z --parallel-immediate --parallel-max 50 "${args[@]}" | sort | uniq -c
+
+# expected:
+#       1 201
+#      49 409</pre>
+  </div>
+  <div class="note-box">
+    <div class="note-box-icon">💡</div>
+    <p class="note-box-text">Run it a few times, with a new product id each time (<code>plast2</code>, <code>plast3</code>…). <strong>More than one 201 means you have the bug.</strong> Exactly one is a good sign, not a proof: the real test sends far more than 50 buyers.</p>
+  </div>
+
+  <h3>Test 2 · The double-click</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-label">bash · on your box</span><button type="button" class="code-copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre class="code-pre" data-lang="bash"># a regular product with plenty of stock
+curl -s -w '\n' -X POST localhost:8080/products -H 'content-type: application/json' \
+  -d '{"id":"pclick1","name":"Click Test","category":"ctest","price":100,"stock":1000}'
+
+# the same user sends the same order 20 times at the same moment
+args=()
+for i in $(seq 20); do
+  [ "$i" -gt 1 ] &amp;&amp; args+=(--next)
+  args+=(-s -o /dev/null -w '%{http_code}\n' -X POST -H 'content-type: application/json' \
+         -d '{"userId":"udouble1","productId":"pclick1"}' http://localhost:8080/orders)
+done
+curl -Z --parallel-immediate --parallel-max 20 "${args[@]}" | sort | uniq -c
+
+# expected:
+#       1 201
+#      19 409
+
+curl -s -w '\n' localhost:8080/products/pclick1        # stock should be 999
+curl -s -w '\n' localhost:8080/users/udouble1/orders   # exactly one order</pre>
+  </div>
+
+  <h3>Test 3 · The crash</h3>
+  <p>Kill your server the hard way, the way a real crash would, and check that it comes back by itself with its data.</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-label">bash · on your box</span><button type="button" class="code-copy-btn" onclick="copyCode(this)">copy</button></div>
+<pre class="code-pre" data-lang="bash"># find the process listening on 8080 (look for pid=… in the output)
+sudo ss -tlnp | grep 8080
+
+# kill it without warning
+sudo kill -9 &lt;pid&gt;
+
+# wait a few seconds, then:
+curl -s -w '\n' localhost:8080/health              # {"status":"ok"} again
+curl -s -w '\n' localhost:8080/products/pclick1    # still there, with its stock</pre>
+  </div>
+  <div class="note-box">
+    <div class="note-box-icon">🐳</div>
+    <p class="note-box-text"><strong>Running in Docker?</strong> <code>ss</code> shows <code>docker-proxy</code> instead of your app. Kill the container's main process instead: <code>sudo kill -9 $(docker inspect -f '{{.State.Pid}}' &lt;container&gt;)</code>. Your restart policy should bring it back.</p>
+  </div>
+</section>
+
+<!-- ═════════ 12 FAQ ═════════ -->
+<section class="section-block animate-fade-up" id="faq">
+  <div class="section-header">
+    <div class="section-num-big">12</div>
+    <div class="section-header-text">
+      <div class="section-title">FAQ</div>
+      <div class="section-subtitle">The questions you're about to ask</div>
+    </div>
+  </div>
+
+  <div class="faq">
+    <details><summary>Can we use Redis, Postgres or SQLite?</summary><div class="faq-body"><p>Yes. Anything that runs on your box.</p></div></details>
+    <details><summary>Can we use Docker?</summary><div class="faq-body"><p>Yes. Make sure a crashed container comes back by itself (a restart policy does that) and that nothing has to be downloaded when it starts.</p></div></details>
+    <details><summary>Can we run more than one process?</summary><div class="faq-body"><p>Yes. Cluster mode, worker threads, several app processes behind nginx: all fine, as long as it all runs on your box.</p></div></details>
+    <details><summary>Can we change OS settings?</summary><div class="faq-body"><p>Yes, it's your machine. <code>sysctl</code>, file limits, swap: go ahead.</p></div></details>
+    <details><summary>How do we load-test before the practice round?</summary><div class="faq-body"><p>Run a load tool such as k6, autocannon or hey on the box itself, against <code>localhost</code>. It uses the same 2 vCPUs you're measuring, so treat the numbers as rough.</p></div></details>
+    <details><summary>Do we get the test script?</summary><div class="faq-body"><p>This document describes everything it does. In practice rounds we run the real thing against your machine and send you the report.</p></div></details>
+    <details><summary>Should we clear our database between runs?</summary><div class="faq-body"><p>Up to you. We never reuse ids or categories, so old data won't break anything. It will still be there, though, just like in real life.</p></div></details>
+    <details><summary>The product page said stock 3, but my order got SOLD_OUT. Is that wrong?</summary><div class="faq-body"><p>No. Product pages may be up to 2 seconds old. The order decision has to be exact, and that's the one that counts.</p></div></details>
+    <details><summary>What if our server crashes during the final?</summary><div class="faq-body"><p>We don't restart anything for you. Failed requests count as errors, the level fails, and your score is the last level you passed. That's why your server has to restart itself (section 09, rule 4).</p></div></details>
+    <details><summary>Do we need HTTPS?</summary><div class="faq-body"><p>No. Plain HTTP on port 8080.</p></div></details>
+    <details><summary>Can we use AI tools?</summary><div class="faq-body"><p>Yes. The top finishers explain their design at the debrief, so make sure you understand what you shipped.</p></div></details>
+  </div>
+</section>
+
+<div class="note-box">
+  <div class="note-box-icon">💬</div>
+  <p class="note-box-text"><strong>Questions?</strong> Ask before code freeze. Once the boxes are locked, the rules don't change.</p>
+</div>
+
+<footer class="site-footer">
+  <span>Last Server Standing · Rules v1.1 · 18 Nov 2026</span>
+  <span>Sheryians Coding School · Kodr</span>
+</footer>
+
+</div>
+</main>
+</div>
+
+<script>
+function answerQuiz(quizId, btn, isCorrect) {
+  var container = document.getElementById(quizId);
+  var feedback = document.getElementById(quizId + '-feedback');
+  var explain = document.getElementById(quizId + '-explain');
+  container.querySelectorAll('.quiz-option').forEach(function (b) {
+    b.disabled = true;
+    b.style.opacity = '0.6';
+  });
+  if (isCorrect) {
+    btn.classList.add('correct');
+    feedback.textContent = '✓ Correct!';
+    feedback.className = 'quiz-feedback correct';
+  } else {
+    btn.classList.add('incorrect');
+    var right = container.querySelector('[data-correct="true"]');
+    if (right) right.classList.add('correct');
+    feedback.textContent = '✗ Not quite — the right answer is highlighted.';
+    feedback.className = 'quiz-feedback incorrect';
+  }
+  if (explain) explain.hidden = false;
+}
+
+function selectText(el) {
+  try {
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch (e) {}
+}
+
+function copyCode(btn) {
+  var pre = btn.closest('.code-block').querySelector('pre');
+  var text = pre.innerText;
+  function label(t) {
+    btn.textContent = t;
+    setTimeout(function () { btn.textContent = 'copy'; }, 1600);
+  }
+  try {
+    navigator.clipboard.writeText(text).then(
+      function () { label('copied'); },
+      function () { selectText(pre); label('selected'); }
+    );
+  } catch (e) {
+    selectText(pre);
+    label('selected');
+  }
+}
+
+(function () {
+  /* Syntax highlighting for <pre data-lang> blocks */
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function wordStart(s, i) { return i === 0 || !/[\w$-]/.test(s[i - 1]); }
+  function afterSpace(s, i) { return i === 0 || /\s/.test(s[i - 1]); }
+  var RULES = {
+    js: [
+      { cls: 'token-comment', re: /\/\/[^\n]*/y },
+      { cls: 'token-string', re: /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/y },
+      { cls: 'token-yaml-key', re: /(?:const|let|var|await|async|return|if|else|function|new|import|from|throw)\b/y, pre: wordStart },
+      { cls: 'token-val', re: /(?:true|false|null|undefined|\d[\d_]*)\b/y, pre: wordStart }
+    ],
+    bash: [
+      { cls: 'token-comment', re: /#[^\n]*/y, pre: afterSpace },
+      { cls: 'token-string', re: /'[^']*'|"(?:[^"\\]|\\.)*"/y },
+      { cls: 'token-flag', re: /--?[A-Za-z][\w-]*/y, pre: afterSpace },
+      { cls: 'token-command', re: /(?:curl|seq|xargs|sort|uniq|ssh|sudo|ss|grep|uvicorn|nodemon|npm|node|docker|git|cd|kill)\b/y, pre: wordStart },
+      { cls: 'token-val', re: /\d+\b/y, pre: wordStart }
+    ],
+    http: [
+      { cls: 'token-comment', re: /#[^\n]*/y, pre: afterSpace },
+      { cls: 'token-command', re: /(?:GET|POST)\b/y, pre: wordStart },
+      { cls: 'token-yaml-key', re: /"(?:[^"\\]|\\.)*"(?=\s*:)/y },
+      { cls: 'token-string', re: /"(?:[^"\\]|\\.)*"/y },
+      { cls: 'token-val', re: /(?:-?\d+(?:\.\d+)?|true|false|null)\b/y, pre: wordStart }
+    ],
+    json: [
+      { cls: 'token-yaml-key', re: /"(?:[^"\\]|\\.)*"(?=\s*:)/y },
+      { cls: 'token-string', re: /"(?:[^"\\]|\\.)*"/y },
+      { cls: 'token-val', re: /(?:-?\d+(?:\.\d+)?|true|false|null)\b/y, pre: wordStart }
+    ]
+  };
+  function highlight(src, rules) {
+    var out = '', plain = '', i = 0;
+    while (i < src.length) {
+      var hit = null;
+      for (var r = 0; r < rules.length; r++) {
+        var rule = rules[r];
+        if (rule.pre && !rule.pre(src, i)) continue;
+        rule.re.lastIndex = i;
+        var m = rule.re.exec(src);
+        if (m && m[0].length) { hit = { cls: rule.cls, text: m[0] }; break; }
+      }
+      if (hit) {
+        out += esc(plain); plain = '';
+        out += '<span class="' + hit.cls + '">' + esc(hit.text) + '</span>';
+        i += hit.text.length;
+      } else {
+        plain += src[i];
+        i++;
+      }
+    }
+    return out + esc(plain);
+  }
+  try {
+    document.querySelectorAll('pre.code-pre[data-lang]').forEach(function (pre) {
+      var rules = RULES[pre.getAttribute('data-lang')];
+      if (rules) pre.innerHTML = highlight(pre.textContent, rules);
+    });
+  } catch (e) {}
+
+  /* Poor-example filter */
+  var chips = document.querySelectorAll('.filter-chip');
+  var cards = document.querySelectorAll('.verdict-card');
+  var countEl = document.getElementById('filterCount');
+  function applyFilter(v) {
+    var shown = 0;
+    cards.forEach(function (c) {
+      var show = v === 'all' || c.getAttribute('data-verdict') === v;
+      c.hidden = !show;
+      if (show) shown++;
+    });
+    chips.forEach(function (ch) { ch.setAttribute('aria-pressed', String(ch.getAttribute('data-filter') === v)); });
+    if (countEl) countEl.textContent = 'Showing ' + shown + ' of ' + cards.length;
+  }
+  chips.forEach(function (ch) {
+    ch.addEventListener('click', function () { applyFilter(ch.getAttribute('data-filter')); });
+  });
+  if (cards.length) applyFilter('all');
+
+  /* Pre-flight counter */
+  var boxes = document.querySelectorAll('.preflight input[type="checkbox"]');
+  var pfCount = document.getElementById('preflightCount');
+  function updatePreflight() {
+    var done = 0;
+    boxes.forEach(function (b) { if (b.checked) done++; });
+    if (pfCount) pfCount.textContent = done + ' / ' + boxes.length + ' done';
+  }
+  boxes.forEach(function (b) { b.addEventListener('change', updatePreflight); });
+  updatePreflight();
+
+  /* Drawer (mobile) */
+  var sidebar = document.getElementById('sidebar');
+  var scrim = document.getElementById('scrim');
+  var menuBtn = document.getElementById('menuBtn');
+  function setDrawer(open) {
+    sidebar.classList.toggle('open', open);
+    scrim.hidden = !open;
+    menuBtn.setAttribute('aria-expanded', String(open));
+  }
+  menuBtn.addEventListener('click', function () { setDrawer(!sidebar.classList.contains('open')); });
+  scrim.addEventListener('click', function () { setDrawer(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setDrawer(false); });
+
+  /* Scrollspy */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  links.forEach(function (l) { l.addEventListener('click', function () { setDrawer(false); }); });
+  if ('IntersectionObserver' in window) {
+    var byId = {};
+    links.forEach(function (l) { byId[l.getAttribute('href').slice(1)] = l; });
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting && byId[e.target.id]) {
+          links.forEach(function (l) { l.classList.remove('active'); });
+          byId[e.target.id].classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    document.querySelectorAll('section[id]').forEach(function (s) { obs.observe(s); });
+  }
+})();
+</script>
+</body>
+</html>
