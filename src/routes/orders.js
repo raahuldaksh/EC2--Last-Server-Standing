@@ -30,7 +30,7 @@ export default async function orderRoutes(fastify) {
       throw validationError('productId must be a non-empty string up to 64 characters');
     }
 
-    const order = purchaseOrder(userId, productId);
+    const order = await purchaseOrder(userId, productId);
     return reply.status(201).send(order);
   });
 }

@@ -216,6 +216,36 @@ npm run test:reconciliation
 npm run benchmark
 ```
 
+### Manual EC2 Read-Load Ramp
+
+Use this read-only test to increase concurrent connections against the running EC2 API. It does not create products or orders. Run it from your computer through an SSH tunnel so port 8080 does not need to be opened publicly.
+
+Terminal 1 (PowerShell):
+```powershell
+ssh -i "<path-to-key.pem>" -N -L 8080:127.0.0.1:8080 ubuntu@<EC2_PUBLIC_IP>
+```
+
+Terminal 2, from the project folder:
+```powershell
+npm run benchmark:manual
+```
+
+The default ramp starts at 1,000 requests/second and increases through 1,500, 2,000, 2,500, 3,000, 4,000, and 5,000; each step lasts 15 seconds. The test reads `p_load_100`, checks `/health` once per second, and stops if it cannot reach 90% of the target rate, errors exceed 1%, p99 exceeds 1 second, or a health check fails. The script caps a single run at 10,000 requests/second. It reports actual response latency; only judge latency when the achieved rate is at least 90% of target. It separately reports the highest step meeting the PRD p99 target of 100 ms.
+
+Requests/second is not the same as unique users/second: one user may send many requests. The report shows both the requested and achieved request rate.
+
+If that product is absent, set `PRODUCT_ID` to an existing product ID. To adjust the run in PowerShell:
+```powershell
+$env:PRODUCT_ID = "p_load_100"
+$env:RPS_STEPS = "1000,1500,2000,2500"
+$env:STEP_DURATION = "15"
+npm run benchmark:manual
+```
+
+Watch EC2 resources in another terminal with `ssh -i "<path-to-key.pem>" ubuntu@<EC2_PUBLIC_IP> "top -b -n 1 | head -15"` and inspect service logs with `ssh -i "<path-to-key.pem>" ubuntu@<EC2_PUBLIC_IP> "sudo journalctl -u last-server-standing -f"`. Let the server cool down between runs. This measures the API through the SSH tunnel and your client/network too; it is not an exact maximum-user guarantee.
+
+> Do not run `npm run benchmark` against the live EC2 database: that existing benchmark clears product/order tables and starts a separate server on port 8080.
+
 ---
 
 ## 💥 8. Crash Recovery Verification (Official Test 3)

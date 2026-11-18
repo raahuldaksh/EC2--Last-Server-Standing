@@ -19,11 +19,14 @@ function getStatements() {
     checkExistingOrder: db.prepare(
       'SELECT 1 FROM orders WHERE user_id = ? AND product_id = ?'
     ),
-    decrementStock: db.prepare(
-      'UPDATE products SET stock = stock - 1 WHERE id = ? AND stock > 0'
-    ),
-    incrementStock: db.prepare(
-      'UPDATE products SET stock = stock + 1 WHERE id = ?'
+    reserveStock: db.prepare(
+      `UPDATE products
+       SET stock = stock - 1
+       WHERE id = ? AND stock > 0
+         AND NOT EXISTS (
+           SELECT 1 FROM orders WHERE user_id = ? AND product_id = ?
+         )
+       RETURNING stock`
     ),
     insertOrder: db.prepare(
       'INSERT INTO orders (order_id, user_id, product_id) VALUES (?, ?, ?)'
@@ -34,48 +37,24 @@ function getStatements() {
   };
 
   purchaseTx = db.transaction((userId, productId, orderId) => {
-    // 1. Check product existence
-    const product = stmts.getProduct.get(productId);
-    if (!product) {
-      return { error: productNotFoundError() };
-    }
-
-    // 2. Check if user already purchased
-    const existing = stmts.checkExistingOrder.get(userId, productId);
-    if (existing) {
-      return { error: alreadyPurchasedError() };
-    }
-
-    // 3. Check stock availability
-    if (product.stock <= 0) {
-      return { error: soldOutError() };
-    }
-
-    // 4. Atomic conditional decrement
-    const updateResult = stmts.decrementStock.run(productId);
-    if (updateResult.changes === 0) {
-      return { error: soldOutError() };
-    }
-
-    // 5. Insert order record
-    try {
-      stmts.insertOrder.run(orderId, userId, productId);
-    } catch (err) {
-      // Catch concurrent duplicate insertion
-      if (
-        err.message &&
-        (err.message.includes('UNIQUE constraint failed') ||
-          err.code === 'SQLITE_CONSTRAINT_UNIQUE')
-      ) {
-        stmts.incrementStock.run(productId);
+    const reservation = stmts.reserveStock.get(productId, userId, productId);
+    if (!reservation) {
+      // Race condition occurred; re-check authoritative state
+      const p = stmts.getProduct.get(productId);
+      if (!p) {
+        return { error: productNotFoundError() };
+      }
+      if (stmts.checkExistingOrder.get(userId, productId)) {
         return { error: alreadyPurchasedError() };
       }
-      throw err;
+      return { error: soldOutError() };
     }
+
+    stmts.insertOrder.run(orderId, userId, productId);
 
     return {
       success: true,
-      remainingStock: product.stock - 1,
+      remainingStock: reservation.stock,
     };
   });
 
@@ -84,8 +63,28 @@ function getStatements() {
 
 export function purchaseOrder(userId, productId) {
   getStatements();
+
+  // Fast non-blocking read checks to avoid SQLite write-lock contention
+  // In WAL mode, SELECT queries take shared read locks that never block other workers
+  const product = stmts.getProduct.get(productId);
+  if (!product) {
+    throw productNotFoundError();
+  }
+
+  // Precedence: 400 (already checked) -> 404 (above) -> 409
+  const existing = stmts.checkExistingOrder.get(userId, productId);
+  if (existing) {
+    throw alreadyPurchasedError();
+  }
+
+  if (product.stock <= 0) {
+    throw soldOutError();
+  }
+
+  // Generate unique order ID
   const orderId = 'o_' + crypto.randomBytes(6).toString('hex');
 
+  // Authoritative atomic reservation within transaction
   const result = purchaseTx(userId, productId, orderId);
 
   if (result.error) {

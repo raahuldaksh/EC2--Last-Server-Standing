@@ -63,8 +63,7 @@ export function getProductById(id) {
     stock: row.stock,
   };
 
-  productCache.set(product);
-  return product;
+  return productCache.set(product);
 }
 
 export function listProductsByCategory({ category, page = 1, limit = 20 }) {

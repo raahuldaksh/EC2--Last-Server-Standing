@@ -9,7 +9,9 @@
     "test": "node tests/functional.test.js",
     "test:concurrency": "node tests/concurrency.test.js",
     "test:reconciliation": "node tests/reconciliation.test.js",
-    "benchmark": "node tests/load/benchmark.js"
+    "benchmark": "node tests/load/benchmark.js",
+    "benchmark:capacity": "node tests/load/run-capacity-benchmark.js",
+    "benchmark:manual": "node tests/load/manual-ramp.js"
   },
   "keywords": [
     "flash-sale",

@@ -3,7 +3,6 @@ import { config } from '../config/env.js';
 class ProductCache {
   constructor() {
     this.cache = new Map();
-    this.categoryTotals = new Map();
   }
 
   get(id) {
@@ -16,24 +15,31 @@ class ProductCache {
       return null; // Expired stock, force DB refresh
     }
 
-    return {
-      id: item.id,
-      name: item.name,
-      category: item.category,
-      price: item.price,
-      stock: item.stock,
-    };
+    return item;
   }
 
   set(product) {
-    this.cache.set(product.id, {
+    const rawJson = JSON.stringify({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      price: product.price,
+      stock: product.stock,
+    });
+    const rawBuffer = Buffer.from(rawJson);
+
+    const cachedItem = {
       id: product.id,
       name: product.name,
       category: product.category,
       price: product.price,
       stock: product.stock,
       cachedAt: Date.now(),
-    });
+      rawJson,
+      rawBuffer,
+    };
+    this.cache.set(product.id, cachedItem);
+    return cachedItem;
   }
 
   updateStock(id, newStock) {
@@ -41,6 +47,14 @@ class ProductCache {
     if (item) {
       item.stock = newStock;
       item.cachedAt = Date.now();
+      item.rawJson = JSON.stringify({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        stock: newStock,
+      });
+      item.rawBuffer = Buffer.from(item.rawJson);
     }
   }
 
@@ -50,7 +64,6 @@ class ProductCache {
 
   clear() {
     this.cache.clear();
-    this.categoryTotals.clear();
   }
 }
 
